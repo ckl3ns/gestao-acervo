@@ -5,6 +5,8 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from catalogo_acervo.application.use_cases.import_source_items_from_source import (
     ImportSourceItemsFromSourceUseCase,
 )
@@ -38,7 +40,7 @@ def test_import_pipeline_resolves_parser_and_aliases(
     logger: ProcessingLogger,
     parser_registry: ParserRegistry,
 ) -> None:
-    source_id = RegisterSourceUseCase(source_repo).execute(
+    source_id = RegisterSourceUseCase(source_repo, parser_registry).execute(
         name="Mock Source",
         source_type="mock",
         parser_name="mock_csv",
@@ -75,8 +77,8 @@ def test_fts5_stays_in_sync_after_upsert_conflict(
     logger: ProcessingLogger,
     parser_registry: ParserRegistry,
 ) -> None:
-    """FTS5 deve refletir valor atualizado após upsert com conflito — sem duplicatas."""
-    source_id = RegisterSourceUseCase(source_repo).execute(
+    """FTS5 deve refletir valor atualizado após upsert com conflito - sem duplicatas."""
+    source_id = RegisterSourceUseCase(source_repo, parser_registry).execute(
         name="FTS Source",
         source_type="mock",
         parser_name="mock_csv",
@@ -90,19 +92,14 @@ def test_fts5_stays_in_sync_after_upsert_conflict(
         logger=logger,
     )
 
-    # Primeira importação
     import_uc.execute(source_id=source_id, file_path=SAMPLE_FILE)
     results_before = SearchCatalogUseCase(item_repo).execute("teologia")
-    assert len(results_before) >= 1, "Deve encontrar item após primeira importação"
+    assert len(results_before) >= 1
 
-    # Segunda importação (upsert com conflito — mesma source_key)
     import_uc.execute(source_id=source_id, file_path=SAMPLE_FILE)
     results_after = SearchCatalogUseCase(item_repo).execute("teologia")
 
-    # FTS5 não deve acumular duplicatas nem perder o registro
-    assert len(results_after) == len(results_before), (
-        f"FTS5 dessincronizado: antes={len(results_before)}, depois={len(results_after)}"
-    )
+    assert len(results_after) == len(results_before)
 
 
 class _InvalidTitleParser(BaseParser):
@@ -110,11 +107,11 @@ class _InvalidTitleParser(BaseParser):
 
     parser_name = "invalid_title"
 
-    def parse(self, file_path: Path) -> list[dict]:
+    def parse(self, file_path: Path) -> list[dict[str, str | None]]:
         return [
             {
                 "source_key": "BK-INVALID",
-                "title": "",  # ← gatilho para ValueError na linha 90-91
+                "title": "",
                 "author": "Autor Teste",
                 "series": None,
                 "publisher": None,
@@ -137,6 +134,24 @@ class _InvalidTitleParser(BaseParser):
         ]
 
 
+class _MirrorParser(BaseParser):
+    """Parser com um único registro parametrizável para testar matching canônico."""
+
+    def __init__(self, parser_name: str, source_key: str) -> None:
+        self.parser_name = parser_name
+        self.source_key = source_key
+
+    def parse(self, file_path: Path) -> list[dict[str, str]]:
+        return [
+            {
+                "source_key": self.source_key,
+                "title": "Introdução à Teologia",
+                "author": "João Silva",
+                "item_type": "book",
+            }
+        ]
+
+
 def test_import_handles_record_errors_gracefully(
     db_conn: sqlite3.Connection,
     source_repo: SourceRepository,
@@ -147,13 +162,7 @@ def test_import_handles_record_errors_gracefully(
     logger: ProcessingLogger,
     parser_registry: ParserRegistry,
 ) -> None:
-    """Erro em registro individual não deve abortar importação inteira.
-
-    O primeiro registro tem título vazio e dispara ValueError no use case.
-    O segundo registro é válido e deve ser importado normalmente.
-    O job termina com status 'completed_with_errors' e erro é logado.
-    """
-    # Registrar fonte com parser que produz registros inválidos
+    """Erro em registro individual não deve abortar importação inteira."""
     source_id = RegisterSourceUseCase(source_repo).execute(
         name="Invalid Source",
         source_type="mock",
@@ -171,24 +180,22 @@ def test_import_handles_record_errors_gracefully(
     )
     import_uc.execute(source_id=source_id, file_path=Path("data/samples/mock_source.csv"))
 
-    # Job deve ter terminado com erro (1 erro, 1 inserção)
     row = db_conn.execute(
         "SELECT status, total_read, total_inserted, total_updated, total_skipped, total_errors FROM imports ORDER BY id DESC LIMIT 1"
     ).fetchone()
     assert row is not None
     status, _total_read, total_inserted, total_updated, total_skipped, total_errors = row
-    assert status == "completed_with_errors", f"Esperado 'completed_with_errors', got '{status}'"
-    assert total_errors == 1, f"Esperado 1 erro, got {total_errors}"
-    assert total_inserted == 1, f"Esperado 1 inserção, got {total_inserted}"
-    assert total_updated == 0, f"Esperado 0 atualizações, got {total_updated}"
-    assert total_skipped == 0, f"Esperado 0 skipped, got {total_skipped}"
+    assert status == "completed_with_errors"
+    assert total_errors == 1
+    assert total_inserted == 1
+    assert total_updated == 0
+    assert total_skipped == 0
 
-    # Item válido foi importado
     results = SearchCatalogUseCase(item_repo).execute("Título Válido")
     assert len(results) == 1
 
 
-def test_import_triggers_match_suggestions(
+def test_import_triggers_match_suggestions_without_symmetric_duplicates(
     db_conn: sqlite3.Connection,
     source_repo: SourceRepository,
     source_lookup: SourceLookupRepository,
@@ -197,17 +204,25 @@ def test_import_triggers_match_suggestions(
     import_repo: ImportRepository,
     match_repo: MatchRepository,
     logger: ProcessingLogger,
-    parser_registry: ParserRegistry,
 ) -> None:
-    """Após importação, suggest_matches deve ser chamado e candidatos persistidos."""
-    source_a_id = RegisterSourceUseCase(source_repo).execute(
+    """Após importar duas fontes equivalentes, deve existir um único match canônico."""
+    parser_registry = ParserRegistry([
+        _MirrorParser("mirror_a", "A-1"),
+        _MirrorParser("mirror_b", "B-1"),
+    ])
+
+    source_a_id = RegisterSourceUseCase(source_repo, parser_registry).execute(
         name="Source A",
         source_type="mock",
-        parser_name="mock_csv",
+        parser_name="mirror_a",
+    )
+    source_b_id = RegisterSourceUseCase(source_repo, parser_registry).execute(
+        name="Source B",
+        source_type="mock",
+        parser_name="mirror_b",
     )
 
     suggest_uc = SuggestMatchesUseCase(items_repo=item_repo, match_repo=match_repo)
-
     import_uc = ImportSourceItemsFromSourceUseCase(
         source_lookup=source_lookup,
         alias_lookup=alias_repo,
@@ -219,7 +234,22 @@ def test_import_triggers_match_suggestions(
     )
 
     import_uc.execute(source_id=source_a_id, file_path=SAMPLE_FILE)
+    import_uc.execute(source_id=source_b_id, file_path=SAMPLE_FILE)
 
-    matches = db_conn.execute("SELECT COUNT(*) FROM matches").fetchone()
-    assert matches is not None
-    assert matches[0] >= 0
+    matches = db_conn.execute(
+        "SELECT left_item_id, right_item_id FROM matches ORDER BY id"
+    ).fetchall()
+    assert len(matches) == 1
+    assert matches[0]["left_item_id"] < matches[0]["right_item_id"]
+
+
+def test_register_source_rejects_unknown_parser(
+    source_repo: SourceRepository,
+    parser_registry: ParserRegistry,
+) -> None:
+    with pytest.raises(ValueError, match="não registrado"):
+        RegisterSourceUseCase(source_repo, parser_registry).execute(
+            name="Fonte Inválida",
+            source_type="mock",
+            parser_name="parser_ausente",
+        )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json as _json
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from catalogo_acervo.domain.entities.alias import Alias
 from catalogo_acervo.domain.entities.catalog_item import CatalogItem
@@ -24,23 +24,25 @@ from .suggest_matches import SuggestMatchesUseCase
 _SOURCE_KEY_CANDIDATES = ("source_key", "id")
 
 
-def _extract_source_key(record: dict, source_id: int, index: int) -> str:
+def _extract_source_key(record: dict[str, Any], source_id: int, index: int) -> str:
     """Extrai source_key do registro com fallback explícito e rastreável.
 
     Política:
     1. Campo 'source_key' no registro (preferido).
     2. Campo 'id' no registro.
-    3. Fallback determinístico baseado em hash SHA-256 do conteúdo do registro —
+    3. Fallback determinístico baseado em hash SHA-256 do conteúdo do registro -
        nunca usa posição da linha para evitar corrupção de identidade entre reimportações.
 
-    O parâmetro `index` é mantido na assinatura para compatibilidade mas não é usado no fallback.
+    O parâmetro `index` é mantido na assinatura para compatibilidade, mas não é usado no fallback.
+    O parâmetro `source_id` também é mantido por compatibilidade com chamadas existentes.
     """
+    del source_id, index
+
     for field in _SOURCE_KEY_CANDIDATES:
         value = record.get(field)
         if value is not None and str(value).strip():
             return str(value).strip()
 
-    # Fallback determinístico — hash SHA-256 do conteúdo, independente de posição.
     content = _json.dumps(record, sort_keys=True, ensure_ascii=False)
     digest = hashlib.sha256(content.encode()).hexdigest()[:16]
     return f"hash:{digest}"
@@ -90,7 +92,7 @@ class ImportSourceItemsFromSourceUseCase:
             records = parser.parse(file_path)
         except Exception as exc:
             self.logger.log(
-                message="Falha no parser — importação abortada",
+                message="Falha no parser - importação abortada",
                 level="ERROR",
                 source_id=source_id,
                 import_id=job_id,
@@ -107,7 +109,6 @@ class ImportSourceItemsFromSourceUseCase:
             try:
                 source_key = _extract_source_key(record, source_id, index)
 
-                # Log when fallback hash was used (Req 3.4)
                 if source_key.startswith("hash:"):
                     self.logger.log(
                         message="Fallback source_key gerado por hash",
@@ -117,7 +118,6 @@ class ImportSourceItemsFromSourceUseCase:
                         context={"hash": source_key, "index": index},
                     )
 
-                # Detect hash collision (Req 3.5)
                 if source_key.startswith("hash:") and source_key in seen_keys:
                     self.logger.log(
                         message="Colisão de hash detectada no fallback de source_key",
@@ -210,7 +210,7 @@ class ImportSourceItemsFromSourceUseCase:
                 "errors": errors,
             },
         )
-        if self.suggest_matches_use_case is not None:
+        if self.suggest_matches_use_case is not None and affected_ids:
             self.suggest_matches_use_case.execute(affected_item_ids=affected_ids)
 
         return job_id
