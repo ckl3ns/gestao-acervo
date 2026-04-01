@@ -67,8 +67,11 @@ Consulte [`docs/STATUS.md`](docs/STATUS.md) para o estado atual e [`docs/MATURIT
 | Arquivo | Conteúdo |
 |---|---|
 | [`INSTRUCTIONS.md`](INSTRUCTIONS.md) | Regras obrigatórias para agentes |
+| [`docs/prd.md`](docs/prd.md) | PRD — visão de produto, requisitos e roadmap |
 | [`docs/STATUS.md`](docs/STATUS.md) | Estado atual, prioridades e riscos |
 | [`docs/WORK_ITEMS.md`](docs/WORK_ITEMS.md) | Backlog e handoffs |
 | [`docs/MATURITY_CRITERIA.md`](docs/MATURITY_CRITERIA.md) | Critérios de saída do bootstrap |
 | [`docs/architecture.md`](docs/architecture.md) | Decisões arquiteturais |
+| [`docs/decisions.md`](docs/decisions.md) | ADRs |
 | [`docs/workflow.md`](docs/workflow.md) | Fluxo de branches, commits e PRs |
+| [`docs/conformidade.md`](docs/conformidade.md) | Análise de conformidade do bootstrap |

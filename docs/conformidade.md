@@ -64,24 +64,22 @@ Remote: sincronizado
 
 ## 3. Documentação
 
-### ✅ Arquivos Essenciais (7 root + 6 docs)
+### ✅ Arquivos Essenciais
 
 **Root:**
 - README.md — overview do projeto
-- QUICKSTART.md — setup rápido
-- INSTRUCTIONS.md — regras obrigatórias
-- AGENTS.md — contexto operacional
-- WORKER_INSTRUCTIONS.md — instruções para trabalhadores
-- SETUP_COMPLETO.md — resumo de preparação
-- gestao-acervo-prd.md — PRD do produto
+- INSTRUCTIONS.md — regras obrigatórias para agentes
+- AGENTS.md — contexto operacional resumido
 
 **docs/:**
+- prd.md — PRD do produto
 - STATUS.md — estado atual ✅ atualizado
 - WORK_ITEMS.md — backlog ✅ atualizado
-- workflow.md — processo detalhado ✅ com lições aprendidas
-- LESSONS_LEARNED.md — problemas e soluções ✅ novo
+- workflow.md — processo detalhado
+- LESSONS_LEARNED.md — problemas e soluções
 - architecture.md — decisões arquiteturais
 - decisions.md — ADRs
+- MATURITY_CRITERIA.md — critérios de saída do bootstrap
 
 ### ✅ Documentação Consolidada
 - Arquivados 6 arquivos redundantes em `.archive/docs-bootstrap/`

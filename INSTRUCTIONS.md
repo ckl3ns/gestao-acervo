@@ -54,7 +54,7 @@ Ordem obrigatória:
 6. `README.md`
 7. `docs/architecture.md`
 8. `docs/decisions.md`
-9. `docs/review-next-step.md`
+9. `docs/MATURITY_CRITERIA.md`
 
 Nenhum agente deve iniciar trabalho sem ler esses arquivos.
 

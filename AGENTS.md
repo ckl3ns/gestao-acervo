@@ -79,5 +79,4 @@ Considere estes arquivos como fonte de verdade:
 - `docs/workflow.md`
 - `docs/architecture.md`
 - `docs/decisions.md`
-- `docs/review-next-step.md`
 - `docs/MATURITY_CRITERIA.md`
