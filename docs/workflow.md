@@ -182,3 +182,61 @@ Se uma branch começar a misturar escopos ou crescer sem nitidez:
 - congelar a branch;
 - registrar o estado em `docs/WORK_ITEMS.md`;
 - abrir nova branch menor para o próximo bloco.
+
+---
+
+## Ciclo de Vida de uma Branch
+
+```
+1. CRIAR
+   git pull origin main
+   git checkout -b agent/minha-tarefa
+   git push -u origin agent/minha-tarefa
+
+2. TRABALHAR (em ciclos pequenos)
+   ... implementar ...
+   pytest -q
+   git add . && git commit -m "feat(...): descrição"
+   git push
+
+3. VALIDAR
+   - testes passando
+   - cobertura >= 70%
+   - documentação atualizada
+   - git status limpo
+
+4. MERGE (Scrum Master faz)
+   git checkout main
+   git pull origin main
+   git merge agent/minha-tarefa --no-edit
+   pytest -q
+   git push origin main
+
+5. LIMPEZA
+   git branch -d agent/minha-tarefa
+   git push origin --delete agent/minha-tarefa
+   git worktree remove ../wt-minha-tarefa (se aplicável)
+```
+
+---
+
+## Checklist: Antes de Reportar Conclusão
+
+- [ ] `pytest -q` passando
+- [ ] `git status` limpo (nada pendente)
+- [ ] Documentação atualizada (STATUS.md, WORK_ITEMS.md)
+- [ ] Branch no remote
+- [ ] README ou TASK.md reflete último estado
+
+---
+
+## Regras de Ouro (Lições Aprendidas)
+
+1. **Documentação é código** — atualize junto ou não commite
+2. **Worktree limpa** — só abandone quando `git status` estiver limpo
+3. **Branch é temporária** — delete após merge
+4. **Pull antes de trabalhar** — sempre sincronizar antes de criar branch
+5. **Force push = emergência** — comunicar se precisar
+6. **Menos markdown** — cada documento deve ter propósito claro
+
+Ver também: `docs/LESSONS_LEARNED.md`
