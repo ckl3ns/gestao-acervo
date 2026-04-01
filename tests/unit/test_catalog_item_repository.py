@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from catalogo_acervo.domain.entities.catalog_item import CatalogItem
+from catalogo_acervo.domain.value_objects.merge_policy import MergePolicy
 from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository import (
     CatalogItemRepository,
 )
@@ -117,3 +118,86 @@ def test_list_all_returns_inserted_items(
     item_repo.upsert(_make_item(registered_source_id, source_key="B"))
     all_items = item_repo.list_all()
     assert len(all_items) == 2
+
+
+def test_upsert_replace_policy_overwrites_optional_fields(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """REPLACE: reimportação com year diferente sobrescreve."""
+    item_repo.upsert(_make_item(registered_source_id, year=2020))
+    item_repo.upsert(
+        _make_item(registered_source_id, year=2024),
+        merge_policy=MergePolicy.REPLACE,
+    )
+
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.year == 2024
+
+
+def test_upsert_replace_policy_overwrites_with_none(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """REPLACE: reimportação com year=None sobrescreve o valor existente."""
+    item_repo.upsert(_make_item(registered_source_id, year=2020))
+    item_repo.upsert(
+        _make_item(registered_source_id, year=None),
+        merge_policy=MergePolicy.REPLACE,
+    )
+
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.year is None
+
+
+def test_upsert_keep_existing_policy_preserves_fields(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """KEEP_EXISTING: reimportação não altera campos opcionais."""
+    item_repo.upsert(_make_item(registered_source_id, year=2020, author_norm="john wesley"))
+    item_repo.upsert(
+        _make_item(registered_source_id, year=2024, author_norm=None),
+        merge_policy=MergePolicy.KEEP_EXISTING,
+    )
+
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.year == 2020
+    assert result.author_norm == "john wesley"
+
+
+def test_upsert_keep_existing_policy_preserves_even_with_new_values(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """KEEP_EXISTING: reimportação com valores novos não altera nada."""
+    item_repo.upsert(_make_item(registered_source_id, year=2020))
+    item_repo.upsert(
+        _make_item(registered_source_id, year=1999, title_norm="novo titulo"),
+        merge_policy=MergePolicy.KEEP_EXISTING,
+    )
+
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.year == 2020
+    assert result.title_norm == "titulo original"
+
+
+def test_upsert_merge_policy_coalesce_behavior(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """MERGE (default): NULL no novo valor preserva o existente."""
+    item_repo.upsert(_make_item(registered_source_id, year=2020, author_norm="original author"))
+    item_repo.upsert(
+        _make_item(registered_source_id, year=None, author_norm=None),
+        merge_policy=MergePolicy.MERGE,
+    )
+
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.year == 2020
+    assert result.author_norm == "original author"

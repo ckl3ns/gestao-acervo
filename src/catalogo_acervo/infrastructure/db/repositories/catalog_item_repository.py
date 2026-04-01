@@ -19,15 +19,41 @@ import json
 import sqlite3
 
 from catalogo_acervo.domain.entities.catalog_item import CatalogItem
+from catalogo_acervo.domain.value_objects.merge_policy import MergePolicy
 
 
 class CatalogItemRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
-    def upsert(self, item: CatalogItem) -> int:
-        cursor = self.conn.execute(
-            """
+    def upsert(self, item: CatalogItem, merge_policy: MergePolicy = MergePolicy.MERGE) -> int:
+        always_fields = "item_type = excluded.item_type, title_raw = excluded.title_raw, raw_record_json = excluded.raw_record_json, is_active = excluded.is_active, current_import_id = excluded.current_import_id, updated_at = CURRENT_TIMESTAMP"
+
+        optional_fields = [
+            "title_norm",
+            "subtitle_raw",
+            "author_raw",
+            "author_norm",
+            "series_raw",
+            "series_norm",
+            "publisher_raw",
+            "publisher_norm",
+            "year",
+            "language",
+            "volume",
+            "edition",
+            "path_or_location",
+            "resource_type",
+        ]
+
+        if merge_policy == MergePolicy.REPLACE:
+            set_clause = ", ".join([f"{f} = excluded.{f}" for f in optional_fields])
+        elif merge_policy == MergePolicy.KEEP_EXISTING:
+            set_clause = ", ".join([f"{f} = {f}" for f in optional_fields])
+        else:
+            set_clause = ", ".join([f"{f} = COALESCE(excluded.{f}, {f})" for f in optional_fields])
+
+        sql = f"""
             INSERT INTO catalog_items (
                 source_id, source_key, item_type, title_raw, title_norm, subtitle_raw,
                 author_raw, author_norm, series_raw, series_norm, publisher_raw, publisher_norm,
@@ -35,28 +61,12 @@ class CatalogItemRepository:
                 raw_record_json, is_active, current_import_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(source_id, source_key) DO UPDATE SET
-                item_type          = excluded.item_type,
-                title_raw          = excluded.title_raw,
-                raw_record_json    = excluded.raw_record_json,
-                is_active          = excluded.is_active,
-                current_import_id  = excluded.current_import_id,
-                updated_at         = CURRENT_TIMESTAMP,
-                -- Campos opcionais: preserva valor existente se novo for NULL (null-safe merge)
-                title_norm         = COALESCE(excluded.title_norm,      title_norm),
-                subtitle_raw       = COALESCE(excluded.subtitle_raw,    subtitle_raw),
-                author_raw         = COALESCE(excluded.author_raw,      author_raw),
-                author_norm        = COALESCE(excluded.author_norm,     author_norm),
-                series_raw         = COALESCE(excluded.series_raw,      series_raw),
-                series_norm        = COALESCE(excluded.series_norm,     series_norm),
-                publisher_raw      = COALESCE(excluded.publisher_raw,   publisher_raw),
-                publisher_norm     = COALESCE(excluded.publisher_norm,  publisher_norm),
-                year               = COALESCE(excluded.year,            year),
-                language           = COALESCE(excluded.language,        language),
-                volume             = COALESCE(excluded.volume,          volume),
-                edition            = COALESCE(excluded.edition,         edition),
-                path_or_location   = COALESCE(excluded.path_or_location, path_or_location),
-                resource_type      = COALESCE(excluded.resource_type,   resource_type)
-            """,
+                {always_fields},
+                {set_clause}
+        """
+
+        cursor = self.conn.execute(
+            sql,
             (
                 item.source_id,
                 item.source_key,
@@ -93,9 +103,7 @@ class CatalogItemRepository:
         return self._to_entity(row) if row else None
 
     def list_all(self) -> list[CatalogItem]:
-        rows = self.conn.execute(
-            "SELECT * FROM catalog_items ORDER BY id DESC"
-        ).fetchall()
+        rows = self.conn.execute("SELECT * FROM catalog_items ORDER BY id DESC").fetchall()
         return [self._to_entity(row) for row in rows]
 
     def search(self, query: str) -> list[CatalogItem]:
