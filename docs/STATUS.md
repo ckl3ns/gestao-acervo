@@ -8,7 +8,12 @@
 
 ## Estado atual do produto
 
-### ✅ Concluído e funcional
+### ✅ Concluído e funcional no bootstrap
+
+> Os itens abaixo estão implementados e testados no contexto do bootstrap local-first.
+> Nenhum deles foi validado com dados reais em escala operacional.
+> Consulte [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md) para os critérios de saída do bootstrap.
+
 - Bootstrap local-first com SQLite + FTS5
 - App Streamlit mínima com `@st.cache_resource`
 - Cadastro de fontes, importação por fonte com resolução de parser
@@ -32,6 +37,8 @@
 - DTOs/mappers criados mas não usados na UI ainda
 - mypy configurado mas não enforçado em hooks
 - Parser mock é o único disponível
+- Caminho crítico com dados reais não provado — ver [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md)
+- Linguagem de "funcional" não implica "operacionalmente confiável"
 
 ---
 

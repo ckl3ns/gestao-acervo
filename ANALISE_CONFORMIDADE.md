@@ -2,7 +2,7 @@
 
 **Data**: 2026-04-01  
 **Scrum Master**: Claude Sonnet 4.6  
-**Status**: ✅ APROVADO PARA PRODUÇÃO
+**Status**: ✅ CONFORME — padrões de processo do estágio bootstrap
 
 ---
 
@@ -169,15 +169,31 @@ Remote: sincronizado
 
 ---
 
+## 9. O que o bootstrap ainda não provou
+
+Conformidade com padrões de processo não equivale a prontidão operacional.
+Os critérios abaixo ainda não foram validados com dados reais.
+Consulte [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md) para o status atualizado de cada um.
+
+| Eixo | Status |
+|------|--------|
+| Identidade de item sob reimportações reais | ❌ Não provado |
+| Matching sob crescimento de acervo | ❌ Não provado |
+| Revisão humana fechando o ciclo | ❌ Não provado |
+| Ingestão real sem implodir premissas do domínio | ❌ Não provado |
+
+---
+
 ## Conclusão
 
-✅ **REPOSITÓRIO APROVADO PARA PRODUÇÃO**
+✅ **REPOSITÓRIO CONFORME COM PADRÕES DE PROCESSO (estágio bootstrap)**
 
-O repositório está em excelente estado:
-- Código de qualidade com 75% cobertura
-- Documentação consolidada e atualizada
-- Lições aprendidas documentadas
-- Processo de desenvolvimento maduro
-- Remote limpo e organizado
+O repositório está em conformidade com os padrões de processo do estágio bootstrap:
+código de qualidade, documentação consolidada, lições aprendidas registradas,
+processo de desenvolvimento funcionando.
 
-**Recomendação**: Prosseguir com WI-004 ou outras tarefas do backlog com confiança.
+O caminho crítico com dados reais ainda não foi provado.
+Consulte [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md) antes de considerar
+o sistema operacionalmente confiável.
+
+**Recomendação**: Prosseguir com WI-004 ou outras tarefas do backlog.

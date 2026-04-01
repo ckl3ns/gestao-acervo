@@ -41,6 +41,27 @@ pytest
 3. Buscar itens pelo campo normalizado com FTS5.
 4. Criar e listar temas.
 
+## O que este bootstrap entrega — e o que ele não prova
+
+Este repositório é um **bootstrap funcional**: a espinha dorsal arquitetural está
+implementada e o loop de desenvolvimento funciona.
+
+**O que está entregue:**
+- Estrutura de domínio (entidades, value objects, contratos)
+- Pipeline de importação com parser, aliases e upsert com merge policy
+- Matching gerado e persistido após importação
+- DTOs e mappers para desacoplamento UI ↔ domínio
+- Infraestrutura de dev (testes, hooks, cobertura)
+
+**O que ainda não foi provado:**
+- Identidade de item sob reimportações com dados reais
+- Matching funcionando sob crescimento real de acervo
+- Revisão humana fechando o ciclo de reconciliação
+- Ingestão real sem implodir premissas do domínio
+
+Para os critérios verificáveis de saída do bootstrap, consulte
+[docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md).
+
 ## Estrutura
 
 - `app/`: interface Streamlit.

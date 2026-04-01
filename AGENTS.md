@@ -19,6 +19,8 @@ O repositório ainda **não** concluiu:
 - UI de revisão manual;
 - trilha de auditoria madura.
 
+Para os critérios verificáveis de saída do bootstrap, consulte `docs/MATURITY_CRITERIA.md`.
+
 ## Arquitetura resumida
 - `app/`: interface Streamlit
 - `src/catalogo_acervo/application`: casos de uso
@@ -78,3 +80,4 @@ Considere estes arquivos como fonte de verdade:
 - `docs/architecture.md`
 - `docs/decisions.md`
 - `docs/review-next-step.md`
+- `docs/MATURITY_CRITERIA.md`
