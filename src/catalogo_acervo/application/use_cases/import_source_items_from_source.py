@@ -16,6 +16,8 @@ from catalogo_acervo.infrastructure.db.repositories.import_repository import Imp
 from catalogo_acervo.infrastructure.ingestion.parser_registry import ParserRegistry
 from catalogo_acervo.infrastructure.logging.processing_logger import ProcessingLogger
 
+from .suggest_matches import SuggestMatchesUseCase
+
 # Campos candidatos para compor source_key, em ordem de preferência.
 _SOURCE_KEY_CANDIDATES = ("source_key", "id")
 
@@ -59,6 +61,7 @@ class ImportSourceItemsFromSourceUseCase:
         import_repository: ImportRepository,
         item_repository: CatalogItemRepository,
         logger: ProcessingLogger,
+        suggest_matches_use_case: SuggestMatchesUseCase | None = None,
     ) -> None:
         self.source_lookup = source_lookup
         self.alias_lookup = alias_lookup
@@ -66,6 +69,7 @@ class ImportSourceItemsFromSourceUseCase:
         self.import_repository = import_repository
         self.item_repository = item_repository
         self.logger = logger
+        self.suggest_matches_use_case = suggest_matches_use_case
 
     def execute(self, source_id: int, file_path: Path) -> int:
         source = self.source_lookup.get_by_id(source_id)
@@ -137,7 +141,11 @@ class ImportSourceItemsFromSourceUseCase:
                     level="ERROR",
                     source_id=source_id,
                     import_id=job_id,
-                    context={"error": str(exc), "record": record, "parser_name": source.parser_name},
+                    context={
+                        "error": str(exc),
+                        "record": record,
+                        "parser_name": source.parser_name,
+                    },
                 )
 
         status = "completed_with_errors" if errors else "completed"
@@ -153,4 +161,7 @@ class ImportSourceItemsFromSourceUseCase:
                 "errors": errors,
             },
         )
+        if self.suggest_matches_use_case is not None:
+            self.suggest_matches_use_case.execute()
+
         return job_id

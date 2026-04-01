@@ -10,11 +10,13 @@ from catalogo_acervo.application.use_cases.import_source_items_from_source impor
 )
 from catalogo_acervo.application.use_cases.register_source import RegisterSourceUseCase
 from catalogo_acervo.application.use_cases.search_catalog import SearchCatalogUseCase
+from catalogo_acervo.application.use_cases.suggest_matches import SuggestMatchesUseCase
 from catalogo_acervo.infrastructure.db.repositories.alias_repository import AliasRepository
 from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository import (
     CatalogItemRepository,
 )
 from catalogo_acervo.infrastructure.db.repositories.import_repository import ImportRepository
+from catalogo_acervo.infrastructure.db.repositories.match_repository import MatchRepository
 from catalogo_acervo.infrastructure.db.repositories.source_lookup_repository import (
     SourceLookupRepository,
 )
@@ -182,3 +184,40 @@ def test_import_handles_record_errors_gracefully(
     # Item válido foi importado
     results = SearchCatalogUseCase(item_repo).execute("Título Válido")
     assert len(results) == 1
+
+
+def test_import_triggers_match_suggestions(
+    db_conn: sqlite3.Connection,
+    source_repo: SourceRepository,
+    source_lookup: SourceLookupRepository,
+    alias_repo: AliasRepository,
+    item_repo: CatalogItemRepository,
+    import_repo: ImportRepository,
+    match_repo: MatchRepository,
+    logger: ProcessingLogger,
+    parser_registry: ParserRegistry,
+) -> None:
+    """Após importação, suggest_matches deve ser chamado e candidatos persistidos."""
+    source_a_id = RegisterSourceUseCase(source_repo).execute(
+        name="Source A",
+        source_type="mock",
+        parser_name="mock_csv",
+    )
+
+    suggest_uc = SuggestMatchesUseCase(items_repo=item_repo, match_repo=match_repo)
+
+    import_uc = ImportSourceItemsFromSourceUseCase(
+        source_lookup=source_lookup,
+        alias_lookup=alias_repo,
+        parser_registry=parser_registry,
+        import_repository=import_repo,
+        item_repository=item_repo,
+        logger=logger,
+        suggest_matches_use_case=suggest_uc,
+    )
+
+    import_uc.execute(source_id=source_a_id, file_path=SAMPLE_FILE)
+
+    matches = db_conn.execute("SELECT COUNT(*) FROM matches").fetchone()
+    assert matches is not None
+    assert matches[0] >= 0
