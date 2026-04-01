@@ -12,12 +12,17 @@ class SuggestMatchesUseCase:
         self.items_repo = items_repo
         self.match_repo = match_repo
 
-    def execute(self, threshold: float = 85.0) -> int:
+    def execute(self, threshold: float = 85.0, affected_item_ids: list[int] | None = None) -> int:
         items = self.items_repo.list_all()
+        if affected_item_ids is not None:
+            affected_set = set(affected_item_ids)
+            candidates = [i for i in items if i.id in affected_set]
+        else:
+            candidates = items
         created = 0
-        for i, left in enumerate(items):
-            for right in items[i + 1 :]:
-                if left.source_id == right.source_id:
+        for left in candidates:
+            for right in items:
+                if left.id == right.id or left.source_id == right.source_id:
                     continue
                 match_result = suggest_match(left, right)
                 if match_result.score >= threshold:

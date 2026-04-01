@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json as _json
 from pathlib import Path
 from typing import Protocol
 
@@ -28,19 +30,20 @@ def _extract_source_key(record: dict, source_id: int, index: int) -> str:
     Política:
     1. Campo 'source_key' no registro (preferido).
     2. Campo 'id' no registro.
-    3. Fallback determinístico baseado em source_id + índice da linha —
-       nunca usa o título para evitar colisões entre itens homônimos.
+    3. Fallback determinístico baseado em hash SHA-256 do conteúdo do registro —
+       nunca usa posição da linha para evitar corrupção de identidade entre reimportações.
 
-    Levanta ValueError se o valor resolvido for string vazia após strip.
+    O parâmetro `index` é mantido na assinatura para compatibilidade mas não é usado no fallback.
     """
     for field in _SOURCE_KEY_CANDIDATES:
         value = record.get(field)
         if value is not None and str(value).strip():
             return str(value).strip()
 
-    # Fallback determinístico — rastreável e único dentro da fonte.
-    fallback = f"auto:{source_id}:{index}"
-    return fallback
+    # Fallback determinístico — hash SHA-256 do conteúdo, independente de posição.
+    content = _json.dumps(record, sort_keys=True, ensure_ascii=False)
+    digest = hashlib.sha256(content.encode()).hexdigest()[:16]
+    return f"hash:{digest}"
 
 
 class SourceLookup(Protocol):
@@ -83,13 +86,50 @@ class ImportSourceItemsFromSourceUseCase:
             ImportJob(source_id=source_id, status="running", raw_file_name=file_path.name)
         )
 
-        records = parser.parse(file_path)
-        inserted = 0
-        errors = 0
+        try:
+            records = parser.parse(file_path)
+        except Exception as exc:
+            self.logger.log(
+                message="Falha no parser — importação abortada",
+                level="ERROR",
+                source_id=source_id,
+                import_id=job_id,
+                context={"parser_name": source.parser_name, "file_path": str(file_path), "error": str(exc)},
+            )
+            self.import_repository.finish(job_id, "failed", 0, 0, 0, 0, 1)
+            raise
+
+        inserted = updated = skipped = errors = 0
+        affected_ids: list[int] = []
+        seen_keys: set[str] = set()
 
         for index, record in enumerate(records):
             try:
                 source_key = _extract_source_key(record, source_id, index)
+
+                # Log when fallback hash was used (Req 3.4)
+                if source_key.startswith("hash:"):
+                    self.logger.log(
+                        message="Fallback source_key gerado por hash",
+                        level="INFO",
+                        source_id=source_id,
+                        import_id=job_id,
+                        context={"hash": source_key, "index": index},
+                    )
+
+                # Detect hash collision (Req 3.5)
+                if source_key.startswith("hash:") and source_key in seen_keys:
+                    self.logger.log(
+                        message="Colisão de hash detectada no fallback de source_key",
+                        level="ERROR",
+                        source_id=source_id,
+                        import_id=job_id,
+                        context={"hash": source_key, "index": index},
+                    )
+                    errors += 1
+                    continue
+
+                seen_keys.add(source_key)
                 title_raw = str(record.get("title") or "").strip()
                 if not title_raw:
                     raise ValueError(f"Registro sem título (source_key={source_key!r})")
@@ -132,8 +172,15 @@ class ImportSourceItemsFromSourceUseCase:
                     raw_record_json=record,
                     current_import_id=job_id,
                 )
-                self.item_repository.upsert(item)
-                inserted += 1
+                item_id, operation = self.item_repository.upsert(item)
+                if operation == "inserted":
+                    inserted += 1
+                    affected_ids.append(item_id)
+                elif operation == "updated":
+                    updated += 1
+                    affected_ids.append(item_id)
+                else:
+                    skipped += 1
             except Exception as exc:
                 errors += 1
                 self.logger.log(
@@ -149,7 +196,7 @@ class ImportSourceItemsFromSourceUseCase:
                 )
 
         status = "completed_with_errors" if errors else "completed"
-        self.import_repository.finish(job_id, status, len(records), inserted, errors)
+        self.import_repository.finish(job_id, status, len(records), inserted, updated, skipped, errors)
         self.logger.log(
             message="Importação finalizada com parser resolvido por fonte",
             source_id=source_id,
@@ -158,10 +205,12 @@ class ImportSourceItemsFromSourceUseCase:
                 "parser_name": source.parser_name,
                 "total_read": len(records),
                 "inserted": inserted,
+                "updated": updated,
+                "skipped": skipped,
                 "errors": errors,
             },
         )
         if self.suggest_matches_use_case is not None:
-            self.suggest_matches_use_case.execute()
+            self.suggest_matches_use_case.execute(affected_item_ids=affected_ids)
 
         return job_id

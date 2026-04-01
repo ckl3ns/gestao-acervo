@@ -154,3 +154,64 @@ def test_add_commits_immediately(
     # Verificar que o registro foi persistido e está visível na mesma conexão
     count = db_conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
     assert count == 1
+
+
+def test_match_duplicate_insert_ignored(
+    db_conn: sqlite3.Connection,
+    match_repo: MatchRepository,
+    registered_source_id: int,
+) -> None:
+    """Inserir o mesmo par duas vezes deve resultar em apenas um registro (INSERT OR IGNORE).
+
+    Validates: Requirements 2.1, 2.2
+    """
+    # Arrange: dois itens de catálogo para satisfazer FK
+    cursor = db_conn.execute(
+        "INSERT INTO catalog_items (source_id, source_key, item_type, title_raw, raw_record_json) VALUES (?, ?, ?, ?, ?)",
+        (registered_source_id, "key-1", "book", "Title 1", "{}"),
+    )
+    item1_id = cursor.lastrowid
+    cursor = db_conn.execute(
+        "INSERT INTO catalog_items (source_id, source_key, item_type, title_raw, raw_record_json) VALUES (?, ?, ?, ?, ?)",
+        (registered_source_id, "key-2", "book", "Title 2", "{}"),
+    )
+    item2_id = cursor.lastrowid
+    db_conn.commit()
+
+    # Act: inserir o mesmo par duas vezes
+    match_repo.add(item1_id, item2_id, 90.0, "title", "possible", "high")
+    match_repo.add(item1_id, item2_id, 90.0, "title", "possible", "high")
+
+    # Assert: apenas um registro deve existir
+    count = db_conn.execute(
+        "SELECT COUNT(*) FROM matches WHERE left_item_id = ? AND right_item_id = ?",
+        (item1_id, item2_id),
+    ).fetchone()[0]
+    assert count == 1
+
+
+def test_match_no_exception_on_duplicate(
+    db_conn: sqlite3.Connection,
+    match_repo: MatchRepository,
+    registered_source_id: int,
+) -> None:
+    """Segunda inserção do mesmo par não deve lançar exceção.
+
+    Validates: Requirements 2.1, 2.2
+    """
+    # Arrange
+    cursor = db_conn.execute(
+        "INSERT INTO catalog_items (source_id, source_key, item_type, title_raw, raw_record_json) VALUES (?, ?, ?, ?, ?)",
+        (registered_source_id, "key-3", "book", "Title 3", "{}"),
+    )
+    item1_id = cursor.lastrowid
+    cursor = db_conn.execute(
+        "INSERT INTO catalog_items (source_id, source_key, item_type, title_raw, raw_record_json) VALUES (?, ?, ?, ?, ?)",
+        (registered_source_id, "key-4", "book", "Title 4", "{}"),
+    )
+    item2_id = cursor.lastrowid
+    db_conn.commit()
+
+    # Act & Assert: nenhuma exceção deve ser lançada
+    match_repo.add(item1_id, item2_id, 90.0, "title", "possible", "high")
+    match_repo.add(item1_id, item2_id, 90.0, "title", "possible", "high")  # não deve lançar

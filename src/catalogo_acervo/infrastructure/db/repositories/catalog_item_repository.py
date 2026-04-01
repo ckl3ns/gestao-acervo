@@ -26,7 +26,24 @@ class CatalogItemRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
-    def upsert(self, item: CatalogItem, merge_policy: MergePolicy = MergePolicy.MERGE) -> int:
+    def upsert(self, item: CatalogItem, merge_policy: MergePolicy = MergePolicy.MERGE) -> tuple[int, str]:
+        """Retorna (item_id, operation) onde operation é 'inserted' | 'updated' | 'skipped'."""
+        existing = self.conn.execute(
+            "SELECT id, raw_record_json FROM catalog_items WHERE source_id = ? AND source_key = ?",
+            (item.source_id, item.source_key),
+        ).fetchone()
+
+        new_json = json.dumps(item.raw_record_json, ensure_ascii=False, sort_keys=True)
+
+        if existing:
+            existing_normalized = json.dumps(
+                json.loads(existing["raw_record_json"]), ensure_ascii=False, sort_keys=True
+            )
+            if existing_normalized == new_json:
+                return int(existing["id"]), "skipped"
+
+        operation = "updated" if existing else "inserted"
+
         always_fields = "item_type = excluded.item_type, title_raw = excluded.title_raw, raw_record_json = excluded.raw_record_json, is_active = excluded.is_active, current_import_id = excluded.current_import_id, updated_at = CURRENT_TIMESTAMP"
 
         optional_fields = [
@@ -86,13 +103,13 @@ class CatalogItemRepository:
                 item.edition,
                 item.path_or_location,
                 item.resource_type,
-                json.dumps(item.raw_record_json, ensure_ascii=False),
+                new_json,
                 int(item.is_active),
                 item.current_import_id,
             ),
         )
         self.conn.commit()
-        return int(cursor.lastrowid or 0)
+        return int(cursor.lastrowid or 0), operation
 
     def get_by_source_and_key(self, source_id: int, source_key: str) -> CatalogItem | None:
         """Busca um item pelo par (source_id, source_key) — chave única."""

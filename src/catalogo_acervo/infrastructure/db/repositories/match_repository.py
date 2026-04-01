@@ -10,7 +10,7 @@ class MatchRepository:
     def add(self, left_item_id: int, right_item_id: int, score: float, rule: str, status: str, confidence_band: str) -> int:
         cursor = self.conn.execute(
             """
-            INSERT INTO matches (left_item_id, right_item_id, match_score, match_rule, status, confidence_band)
+            INSERT OR IGNORE INTO matches (left_item_id, right_item_id, match_score, match_rule, status, confidence_band)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (left_item_id, right_item_id, score, rule, status, confidence_band),

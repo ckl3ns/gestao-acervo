@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class ImportJob(BaseModel):
     id: int | None = None
     source_id: int
-    import_mode: str = "full_replace"
+    import_mode: str = "upsert"
     imported_at: datetime | None = None
     status: str = "pending"
     total_read: int = 0

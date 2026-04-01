@@ -60,7 +60,7 @@ def test_import_pipeline_resolves_parser_and_aliases(
     )
     import_uc.execute(source_id=source_id, file_path=SAMPLE_FILE)
 
-    results = SearchCatalogUseCase(item_repo).execute('author_norm:"equipe do seminario"')
+    results = SearchCatalogUseCase(item_repo).execute("equipe do seminario")
     assert len(results) == 1
     assert results[0].author_norm == "equipe do seminario"
 
@@ -173,13 +173,15 @@ def test_import_handles_record_errors_gracefully(
 
     # Job deve ter terminado com erro (1 erro, 1 inserção)
     row = db_conn.execute(
-        "SELECT status, total_read, total_inserted, total_errors FROM imports ORDER BY id DESC LIMIT 1"
+        "SELECT status, total_read, total_inserted, total_updated, total_skipped, total_errors FROM imports ORDER BY id DESC LIMIT 1"
     ).fetchone()
     assert row is not None
-    status, _total_read, total_inserted, total_errors = row
+    status, _total_read, total_inserted, total_updated, total_skipped, total_errors = row
     assert status == "completed_with_errors", f"Esperado 'completed_with_errors', got '{status}'"
     assert total_errors == 1, f"Esperado 1 erro, got {total_errors}"
     assert total_inserted == 1, f"Esperado 1 inserção, got {total_inserted}"
+    assert total_updated == 0, f"Esperado 0 atualizações, got {total_updated}"
+    assert total_skipped == 0, f"Esperado 0 skipped, got {total_skipped}"
 
     # Item válido foi importado
     results = SearchCatalogUseCase(item_repo).execute("Título Válido")

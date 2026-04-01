@@ -21,6 +21,9 @@ def _make_item(source_id: int, **kwargs: object) -> CatalogItem:
         "current_import_id": None,
     }
     defaults.update(kwargs)
+    # Ensure raw_record_json reflects the item's fields so skip detection works correctly
+    if "raw_record_json" not in kwargs:
+        defaults["raw_record_json"] = {k: str(v) for k, v in defaults.items() if v is not None}
     return CatalogItem(**defaults)  # type: ignore[arg-type]
 
 
@@ -201,3 +204,53 @@ def test_upsert_merge_policy_coalesce_behavior(
     assert result is not None
     assert result.year == 2020
     assert result.author_norm == "original author"
+
+
+# --- Tests for task 1.2: upsert returns (item_id, operation) ---
+
+def test_upsert_returns_inserted_for_new_item(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    item_id, operation = item_repo.upsert(_make_item(registered_source_id))
+    assert operation == "inserted"
+    assert item_id > 0
+
+
+def test_upsert_returns_updated_for_existing_item_with_change(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    item_repo.upsert(_make_item(registered_source_id, title_raw="Título A"))
+    item_id, operation = item_repo.upsert(_make_item(registered_source_id, title_raw="Título B"))
+    assert operation == "updated"
+    assert item_id > 0
+
+
+def test_upsert_returns_skipped_for_identical_item(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    item = _make_item(registered_source_id)
+    first_id, _ = item_repo.upsert(item)
+    second_id, operation = item_repo.upsert(item)
+    assert operation == "skipped"
+    assert second_id == first_id
+
+
+def test_upsert_skipped_does_not_modify_db(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """Skipped upsert must not execute the INSERT/UPDATE when content is identical."""
+    item = _make_item(registered_source_id, year=2020)
+    first_id, first_op = item_repo.upsert(item)
+    assert first_op == "inserted"
+    # Re-upsert with the exact same item — raw_record_json is identical → skipped
+    second_id, second_op = item_repo.upsert(item)
+    assert second_op == "skipped"
+    assert second_id == first_id
+    # DB record must be unchanged
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.year == 2020

@@ -6,67 +6,67 @@ Correções cirúrgicas de 8 falhas estruturais no núcleo do sistema, executada
 
 ## Tasks
 
-- [ ] 1. Corrigir semântica verdadeira de importação
-  - [ ] 1.1 Alterar `ImportJob.import_mode` default para `"upsert"` em `domain/entities/import_job.py`
+- [x] 1. Corrigir semântica verdadeira de importação
+  - [x] 1.1 Alterar `ImportJob.import_mode` default para `"upsert"` em `domain/entities/import_job.py`
     - Trocar valor padrão de `"full_replace"` para `"upsert"`
     - _Requirements: 1.1_
 
-  - [ ] 1.2 Modificar `CatalogItemRepository.upsert()` para retornar `(item_id, operation)`
+  - [x] 1.2 Modificar `CatalogItemRepository.upsert()` para retornar `(item_id, operation)`
     - Adicionar `SELECT` de existência antes do upsert usando `UNIQUE(source_id, source_key)`
     - Comparar `raw_record_json` serializado para detectar `"skipped"`
     - Retornar `tuple[int, str]` com `"inserted"` | `"updated"` | `"skipped"`
     - _Requirements: 1.2, 1.3, 1.4_
 
-  - [ ] 1.3 Atualizar `ImportRepository.finish()` para receber e persistir `total_updated` e `total_skipped`
+  - [x] 1.3 Atualizar `ImportRepository.finish()` para receber e persistir `total_updated` e `total_skipped`
     - Adicionar parâmetros `total_updated: int` e `total_skipped: int` à assinatura
     - Atualizar query SQL para incluir esses campos
     - _Requirements: 1.5, 1.6_
 
-  - [ ] 1.4 Atualizar pipeline em `import_source_items_from_source.py` para separar contadores e acumular `affected_ids`
+  - [x] 1.4 Atualizar pipeline em `import_source_items_from_source.py` para separar contadores e acumular `affected_ids`
     - Substituir contador único por `inserted`, `updated`, `skipped`, `errors`
     - Acumular `affected_ids: list[int]` com IDs dos itens inseridos/atualizados
     - Passar todos os contadores para `import_repository.finish()`
     - _Requirements: 1.2, 1.3, 1.4, 1.6, 1.7_
 
-  - [ ]* 1.5 Escrever testes unitários para semântica de importação
+  - [x] 1.5 Escrever testes unitários para semântica de importação
     - `test_import_job_default_mode`: verifica `import_mode == "upsert"`
     - `test_finish_persists_updated_skipped`: verifica persistência dos novos contadores
     - `test_counter_conservation`: verifica `inserted + updated + skipped + errors == total_read`
     - _Requirements: 1.1, 1.5, 1.7_
 
-  - [ ]* 1.6 Escrever property test — Property 1: Invariante de conservação de contadores
+  - [x] 1.6 Escrever property test — Property 1: Invariante de conservação de contadores
     - **Property 1: counter conservation invariant**
     - **Validates: Requirements 1.7**
     - Usar `@given(st.lists(...))` com registros variados, verificar soma dos contadores
 
-  - [ ]* 1.7 Escrever property test — Property 2: Corretude do contador de upsert
+  - [x] 1.7 Escrever property test — Property 2: Corretude do contador de upsert
     - **Property 2: upsert counter correctness**
     - **Validates: Requirements 1.2, 1.3, 1.4**
     - Usar `@given(st.booleans())` para simular item existente vs. novo
 
-- [ ] 2. Adicionar proteção de falha no parser
+- [x] 2. Adicionar proteção de falha no parser
   - Depende da task 1 (mesmo arquivo `import_source_items_from_source.py`)
-  - [ ] 2.1 Envolver `parser.parse(file_path)` em try/except com finalização garantida
+  - [x] 2.1 Envolver `parser.parse(file_path)` em try/except com finalização garantida
     - Capturar qualquer exceção lançada pelo parser
     - Chamar `import_repository.finish()` com `status="failed"` e `total_errors=1`
     - Registrar no `ProcessingLogger` com `level="ERROR"`, nome do parser e caminho do arquivo
     - Re-lançar a exceção após finalizar o job
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ]* 2.2 Escrever testes unitários para proteção do parser
+  - [x] 2.2 Escrever testes unitários para proteção do parser
     - `test_parser_failure_sets_failed_status`: mock parser que lança, verifica `status="failed"` no banco
     - `test_parser_failure_reraises`: verifica que a exceção é re-lançada após `finish()`
     - `test_no_job_stays_running_on_success`: verifica status final diferente de `"running"` em caso de sucesso
     - _Requirements: 4.1, 4.2, 4.4, 4.5_
 
-  - [ ]* 2.3 Escrever property test — Property 3: Nenhum ImportJob permanece com status "running"
+  - [x] 2.3 Escrever property test — Property 3: Nenhum ImportJob permanece com status "running"
     - **Property 3: no job stays running**
     - **Validates: Requirements 4.1, 4.2, 4.4, 4.5**
     - Usar `@given(st.booleans())` para simular parser falhando vs. sucesso
 
-- [ ] 3. Implementar fallback de source_key por hash determinístico
+- [x] 3. Implementar fallback de source_key por hash determinístico
   - Depende da task 1 (mesmo arquivo `import_source_items_from_source.py`)
-  - [ ] 3.1 Substituir fallback `auto:{source_id}:{index}` por hash SHA-256 em `_extract_source_key()`
+  - [x] 3.1 Substituir fallback `auto:{source_id}:{index}` por hash SHA-256 em `_extract_source_key()`
     - Usar `hashlib.sha256` sobre `json.dumps(record, sort_keys=True)`
     - Truncar digest para 16 caracteres, prefixar com `"hash:"`
     - Manter parâmetro `index` na assinatura para compatibilidade, mas não usá-lo no fallback
@@ -74,82 +74,82 @@ Correções cirúrgicas de 8 falhas estruturais no núcleo do sistema, executada
     - Tratar colisão de hash como erro: log + `total_errors++`
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ]* 3.2 Escrever testes unitários para fallback de source_key
+  - [x] 3.2 Escrever testes unitários para fallback de source_key
     - `test_source_key_fallback_is_deterministic`: mesmo registro em ordens diferentes → mesmo hash
     - `test_source_key_fallback_prefix`: verifica prefixo `"hash:"`
     - `test_source_key_uses_explicit_field_when_present`: campo `id` ou `source_key` tem prioridade
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ]* 3.3 Escrever property test — Property 6: Determinismo do source_key de fallback
+  - [x] 3.3 Escrever property test — Property 6: Determinismo do source_key de fallback
     - **Property 6: source_key fallback determinism**
     - **Validates: Requirements 3.1, 3.2, 3.3**
     - Usar `@given(st.dictionaries(st.text(), st.text()))` e verificar resultado idêntico em qualquer ordem
 
-- [ ] 4. Checkpoint — Verificar tasks 1–3
+- [x] 4. Checkpoint — Verificar tasks 1–3
   - Garantir que todos os testes das tasks 1, 2 e 3 passam antes de continuar.
   - Rodar `pytest -q` e confirmar zero falhas.
 
-- [ ] 5. Adicionar UNIQUE em matches e INSERT OR IGNORE no MatchRepository
-  - [ ] 5.1 Adicionar constraint `UNIQUE(left_item_id, right_item_id)` em `infrastructure/db/schema.sql`
+- [x] 5. Adicionar UNIQUE em matches e INSERT OR IGNORE no MatchRepository
+  - [x] 5.1 Adicionar constraint `UNIQUE(left_item_id, right_item_id)` em `infrastructure/db/schema.sql`
     - Adicionar constraint na definição da tabela `matches`
     - Garantir que o bootstrap recria a tabela se necessário (DROP + CREATE ou migration)
     - _Requirements: 2.1_
 
-  - [ ] 5.2 Trocar `INSERT` por `INSERT OR IGNORE` em `MatchRepository.add()`
+  - [x] 5.2 Trocar `INSERT` por `INSERT OR IGNORE` em `MatchRepository.add()`
     - Atualizar query em `infrastructure/db/repositories/match_repository.py`
     - Garantir que nenhuma exceção é lançada em inserção duplicada
     - _Requirements: 2.2_
 
-  - [ ]* 5.3 Escrever testes unitários para deduplicação de matches
+  - [x] 5.3 Escrever testes unitários para deduplicação de matches
     - `test_match_duplicate_insert_ignored`: inserir mesmo par duas vezes, verificar `count == 1`
     - `test_match_no_exception_on_duplicate`: verificar que não lança exceção
     - _Requirements: 2.1, 2.2_
 
-  - [ ]* 5.4 Escrever property test — Property 5: Deduplicação de pares de matching
+  - [x] 5.4 Escrever property test — Property 5: Deduplicação de pares de matching
     - **Property 5: match deduplication**
     - **Validates: Requirements 2.1, 2.2**
     - Usar `@given(st.integers(min_value=1), st.integers(min_value=1))` e verificar sem duplicata
 
-- [ ] 6. Tornar SuggestMatchesUseCase incremental com affected_item_ids
+- [x] 6. Tornar SuggestMatchesUseCase incremental com affected_item_ids
   - Depende da task 1 (acumulação de `affected_ids` no pipeline) e task 5 (INSERT OR IGNORE)
-  - [ ] 6.1 Modificar `SuggestMatchesUseCase.execute()` para aceitar `affected_item_ids: list[int] | None`
+  - [x] 6.1 Modificar `SuggestMatchesUseCase.execute()` para aceitar `affected_item_ids: list[int] | None`
     - Quando `affected_item_ids` é fornecido, filtrar `candidates` apenas para esses IDs
     - Quando `None`, manter comportamento atual (varredura total)
     - _Requirements: 2.5_
 
-  - [ ] 6.2 Passar `affected_ids` do pipeline para `SuggestMatchesUseCase.execute()`
+  - [x] 6.2 Passar `affected_ids` do pipeline para `SuggestMatchesUseCase.execute()`
     - Em `import_source_items_from_source.py`, chamar `suggest_matches_use_case.execute(affected_item_ids=affected_ids)`
     - _Requirements: 2.5_
 
-  - [ ]* 6.3 Escrever testes unitários para incrementalidade do matching
+  - [x] 6.3 Escrever testes unitários para incrementalidade do matching
     - `test_suggest_matches_incremental_only_processes_affected`: verifica que apenas IDs afetados são processados
     - `test_suggest_matches_idempotent_on_no_change`: segunda execução sem mudança não cria novas linhas
     - _Requirements: 2.3, 2.4, 2.5_
 
-  - [ ]* 6.4 Escrever property test — Property 4: Idempotência do matching
+  - [x] 6.4 Escrever property test — Property 4: Idempotência do matching
     - **Property 4: match idempotence**
     - **Validates: Requirements 2.3, 2.4**
     - Usar estratégia de itens gerados, executar duas vezes, verificar contagem igual
 
-- [ ] 7. Corrigir precedência de aliases por especificidade
-  - [ ] 7.1 Atualizar `ORDER BY` em `AliasRepository.list_active()`
+- [x] 7. Corrigir precedência de aliases por especificidade
+  - [x] 7.1 Atualizar `ORDER BY` em `AliasRepository.list_active()`
     - Adicionar `CASE WHEN source_scope IS NULL THEN 1 ELSE 0 END` como primeiro critério de ordenação
     - Aliases com `source_scope` não-nulo devem preceder aliases globais
     - _Requirements: 5.1_
 
-  - [ ]* 7.2 Escrever testes unitários para precedência de aliases
+  - [x] 7.2 Escrever testes unitários para precedência de aliases
     - `test_alias_scoped_wins_over_global`: alias específico e global para mesmo texto, verifica qual vence
     - `test_alias_global_used_when_no_scoped`: sem alias específico, global é aplicado
     - `test_alias_order_independent`: resultado igual independente da ordem de inserção
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ]* 7.3 Escrever property test — Property 7: Precedência de alias específico sobre global
+  - [x] 7.3 Escrever property test — Property 7: Precedência de alias específico sobre global
     - **Property 7: alias scoped precedence**
     - **Validates: Requirements 5.1, 5.2, 5.4, 5.5**
     - Usar `@given(st.text(), st.text(), st.text())` para alias_text, canonical global e scoped
 
-- [ ] 8. Sanitizar queries FTS5 em SearchCatalogUseCase
-  - [ ] 8.1 Implementar `_sanitize_fts5_query()` em `application/use_cases/search_catalog.py`
+- [x] 8. Sanitizar queries FTS5 em SearchCatalogUseCase
+  - [x] 8.1 Implementar `_sanitize_fts5_query()` em `application/use_cases/search_catalog.py`
     - Remover aspas não fechadas
     - Remover parênteses não balanceados
     - Remover operadores FTS5 isolados (AND, OR, NOT no início/fim)
@@ -157,18 +157,18 @@ Correções cirúrgicas de 8 falhas estruturais no núcleo do sistema, executada
     - Retornar string vazia se query for vazia ou só espaços
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 8.2 Aplicar sanitização em `SearchCatalogUseCase.execute()` antes de chamar o repositório
+  - [x] 8.2 Aplicar sanitização em `SearchCatalogUseCase.execute()` antes de chamar o repositório
     - Retornar `[]` imediatamente se query sanitizada for vazia
     - _Requirements: 6.4, 6.5_
 
-  - [ ]* 8.3 Escrever testes unitários para sanitização FTS5
+  - [x] 8.3 Escrever testes unitários para sanitização FTS5
     - `test_fts5_empty_query_returns_empty`: query vazia retorna lista vazia
     - `test_fts5_unbalanced_parens`: query `"(foo"` não lança exceção
     - `test_fts5_unclosed_quote`: query com aspas não fechadas não lança exceção
     - `test_fts5_isolated_operator`: query `"AND"` sozinha não lança exceção
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ]* 8.4 Escrever property test — Property 8: Segurança de sanitização FTS5
+  - [x] 8.4 Escrever property test — Property 8: Segurança de sanitização FTS5
     - **Property 8: FTS5 sanitization safety**
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5**
     - Usar `@given(st.text())` com `max_examples=200`, verificar que nunca lança `OperationalError`
@@ -184,7 +184,7 @@ Correções cirúrgicas de 8 falhas estruturais no núcleo do sistema, executada
     - Passar `suggest_matches_use_case=suggest_matches_uc` para `ImportSourceItemsFromSourceUseCase`
     - _Requirements: 7.1, 7.2_
 
-  - [ ]* 9.3 Escrever teste unitário para wiring da UI
+  - [ ] 9.3 Escrever teste unitário para wiring da UI
     - `test_suggest_matches_wired_in_app`: instanciar use cases e verificar que `import_uc.suggest_matches_use_case` não é `None`
     - _Requirements: 7.1, 7.2_
 

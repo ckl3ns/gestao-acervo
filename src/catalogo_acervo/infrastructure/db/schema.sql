@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS matches (
   confidence_band TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(left_item_id, right_item_id),
   FOREIGN KEY (left_item_id) REFERENCES catalog_items(id),
   FOREIGN KEY (right_item_id) REFERENCES catalog_items(id)
 );

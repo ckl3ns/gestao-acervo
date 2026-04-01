@@ -56,6 +56,13 @@ class AliasRepository:
 
     def list_active(self) -> list[Alias]:
         rows = self.conn.execute(
-            "SELECT * FROM aliases WHERE is_active = 1 ORDER BY alias_kind, alias_text"
+            """
+            SELECT * FROM aliases
+            WHERE is_active = 1
+            ORDER BY
+                CASE WHEN source_scope IS NULL THEN 1 ELSE 0 END,
+                alias_kind,
+                alias_text
+            """
         ).fetchall()
         return [Alias.model_validate(dict(row)) for row in rows]

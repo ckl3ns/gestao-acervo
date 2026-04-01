@@ -1,0 +1,133 @@
+"""Testes unitários para sanitização de queries FTS5 — Requirement 6."""
+
+from __future__ import annotations
+
+import sqlite3
+
+import pytest
+
+from catalogo_acervo.application.use_cases.search_catalog import (
+    SearchCatalogUseCase,
+    _sanitize_fts5_query,
+)
+from catalogo_acervo.infrastructure.db.bootstrap import init_db
+from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository import (
+    CatalogItemRepository,
+)
+
+_SCHEMA_PATH = (
+    __import__("pathlib").Path(__file__).parent.parent.parent
+    / "src/catalogo_acervo/infrastructure/db/schema.sql"
+)
+
+
+@pytest.fixture()
+def db_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    init_db(conn, _SCHEMA_PATH)
+    return conn
+
+
+# ---------------------------------------------------------------------------
+# _sanitize_fts5_query — testes unitários puros (sem banco)
+# ---------------------------------------------------------------------------
+
+
+def test_fts5_empty_query_returns_empty_string() -> None:
+    assert _sanitize_fts5_query("") == ""
+
+
+def test_fts5_whitespace_only_returns_empty_string() -> None:
+    assert _sanitize_fts5_query("   ") == ""
+
+
+def test_fts5_normal_query_unchanged() -> None:
+    result = _sanitize_fts5_query("teologia")
+    assert result == "teologia"
+
+
+def test_fts5_unbalanced_open_paren_removed() -> None:
+    result = _sanitize_fts5_query("(foo")
+    assert "(" not in result
+    assert result != ""  # palavra preservada
+
+
+def test_fts5_unbalanced_close_paren_removed() -> None:
+    result = _sanitize_fts5_query("foo)")
+    assert ")" not in result
+
+
+def test_fts5_balanced_parens_words_preserved() -> None:
+    # Parênteses são removidos; palavras internas são preservadas
+    result = _sanitize_fts5_query("(foo bar)")
+    assert "(" not in result
+    assert "foo" in result
+    assert "bar" in result
+
+
+def test_fts5_unclosed_quote_removed() -> None:
+    result = _sanitize_fts5_query('"unterminated')
+    assert '"' not in result
+
+
+def test_fts5_closed_quotes_words_preserved() -> None:
+    # Aspas são removidas; palavras internas são preservadas
+    result = _sanitize_fts5_query('"frase exata"')
+    assert '"' not in result
+    assert "frase" in result
+    assert "exata" in result
+
+
+def test_fts5_isolated_and_operator_removed() -> None:
+    result = _sanitize_fts5_query("AND")
+    assert result == ""
+
+
+def test_fts5_isolated_or_operator_removed() -> None:
+    result = _sanitize_fts5_query("OR")
+    assert result == ""
+
+
+def test_fts5_isolated_not_operator_removed() -> None:
+    result = _sanitize_fts5_query("NOT")
+    assert result == ""
+
+
+def test_fts5_cj_date_style_query_no_error() -> None:
+    # "C. J. Date" causava OperationalError antes da sanitização
+    result = _sanitize_fts5_query("C. J. Date")
+    assert isinstance(result, str)
+
+
+# ---------------------------------------------------------------------------
+# SearchCatalogUseCase.execute() — não deve lançar exceção com inputs ruins
+# ---------------------------------------------------------------------------
+
+
+def test_search_empty_query_returns_empty_list(db_conn: sqlite3.Connection) -> None:
+    uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
+    assert uc.execute("") == []
+
+
+def test_search_whitespace_query_returns_empty_list(db_conn: sqlite3.Connection) -> None:
+    uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
+    assert uc.execute("   ") == []
+
+
+def test_search_unbalanced_parens_no_exception(db_conn: sqlite3.Connection) -> None:
+    uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
+    result = uc.execute("(foo")
+    assert isinstance(result, list)
+
+
+def test_search_unclosed_quote_no_exception(db_conn: sqlite3.Connection) -> None:
+    uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
+    result = uc.execute('"unterminated')
+    assert isinstance(result, list)
+
+
+def test_search_isolated_operator_no_exception(db_conn: sqlite3.Connection) -> None:
+    uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
+    result = uc.execute("AND")
+    assert isinstance(result, list)

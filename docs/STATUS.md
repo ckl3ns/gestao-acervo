@@ -1,6 +1,6 @@
 # STATUS.md
 
-**Última atualização**: 2026-04-01  
+**Última atualização**: 2026-04-01 (core-integrity-fixes em andamento)  
 **Projeto**: Catálogo Unificado de Acervo  
 **Modelo operacional**: PO humano + Scrum Master/Tech Lead por agente + equipe de agentes em worktrees isoladas
 
@@ -17,26 +17,33 @@
 - Bootstrap local-first com SQLite + FTS5
 - App Streamlit mínima com `@st.cache_resource`
 - Cadastro de fontes, importação por fonte com resolução de parser
-- Aliases no pipeline de importação
-- Upsert null-safe com COALESCE
+- Aliases no pipeline de importação — **com precedência correta (específico > global)**
+- Upsert null-safe com COALESCE — **retornando inserted/updated/skipped**
 - **DTOs e mappers** — CatalogItemDTO, SourceDTO, mappers bidirecionais (WI-001)
-- **Matching integrado ao pipeline** — suggest_matches chamado após upsert (WI-002)
+- **Matching integrado ao pipeline** — suggest_matches chamado após upsert, incremental por affected_ids (WI-002)
 - **MergePolicy enum (REPLACE, MERGE, KEEP_EXISTING)** — upsert com merge_policy (WI-003)
-- source_key com extração segura e fallback determinístico
+- source_key com extração segura e **fallback por hash SHA-256 determinístico**
 - MatchScore + ConfidenceBand value objects
+- **Tabela matches com UNIQUE(left_item_id, right_item_id)** — matching idempotente
+- **ImportJob com contadores reais** — inserted/updated/skipped/errors separados
+- **Proteção de falha no parser** — job finalizado como "failed" em caso de exceção
+- **Busca FTS5 sanitizada** — queries de usuário não causam OperationalError
 - Infraestrutura de dev: ruff, mypy, pytest-cov, pre-commit, pre-push
 - conftest.py com fixtures compartilhadas
-- **58 testes passando, 75% cobertura** (validado em 2026-04-01)
+- **104 testes passando** (58 originais + 46 novos de core-integrity-fixes)
 
 ### 🚧 Próximas prioridades
-1. **Revisão manual na UI** — workflow de reconciliação (WI-004)
-2. **Parser real CSV/JSON** — substituir MockParser
-3. **Auditoria** — trilha de decisões de reconciliação
+1. **Wiring do matching na UI** — task 9 da spec core-integrity-fixes
+2. **Corrigir erros mypy** — tasks 11–12
+3. **Habilitar mypy no pre-push** — task 13
+4. **Revisão manual na UI** — workflow de reconciliação (WI-004)
+5. **Parser real CSV/JSON** — substituir MockParser
 
 ### ⚠️ Riscos conhecidos
 - DTOs/mappers criados mas não usados na UI ainda
-- mypy configurado mas não enforçado em hooks
+- mypy configurado mas não enforçado em hooks (tasks 11–13 pendentes)
 - Parser mock é o único disponível
+- Wiring do matching na UI pendente (task 9)
 - Caminho crítico com dados reais não provado — ver [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md)
 - Linguagem de "funcional" não implica "operacionalmente confiável"
 

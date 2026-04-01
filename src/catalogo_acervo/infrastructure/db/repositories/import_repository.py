@@ -20,13 +20,13 @@ class ImportRepository:
         self.conn.commit()
         return int(cursor.lastrowid)
 
-    def finish(self, job_id: int, status: str, total_read: int, total_inserted: int, total_errors: int) -> None:
+    def finish(self, job_id: int, status: str, total_read: int, total_inserted: int, total_updated: int, total_skipped: int, total_errors: int) -> None:
         self.conn.execute(
             """
             UPDATE imports
-            SET status = ?, total_read = ?, total_inserted = ?, total_errors = ?
+            SET status = ?, total_read = ?, total_inserted = ?, total_updated = ?, total_skipped = ?, total_errors = ?
             WHERE id = ?
             """,
-            (status, total_read, total_inserted, total_errors, job_id),
+            (status, total_read, total_inserted, total_updated, total_skipped, total_errors, job_id),
         )
         self.conn.commit()
