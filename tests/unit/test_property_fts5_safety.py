@@ -31,18 +31,16 @@ def _make_conn() -> sqlite3.Connection:
 @settings(max_examples=200)
 @given(st.text())
 def test_property_fts5_never_raises(query: str) -> None:
-    """For any string input, SearchCatalogUseCase.execute() must never raise OperationalError.
-
-    # Feature: core-integrity-fixes, Property 8: FTS5 sanitization safety
-    Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5
-    """
+    """For any string input, SearchCatalogUseCase.execute() must never raise OperationalError."""
     conn = _make_conn()
-    uc = SearchCatalogUseCase(CatalogItemRepository(conn))
-
     try:
-        result = uc.execute(query)
-        assert isinstance(result, list)
-    except sqlite3.OperationalError as exc:
-        raise AssertionError(
-            f"SearchCatalogUseCase.execute() raised OperationalError for query {query!r}: {exc}"
-        ) from exc
+        uc = SearchCatalogUseCase(CatalogItemRepository(conn))
+        try:
+            result = uc.execute(query)
+            assert isinstance(result, list)
+        except sqlite3.OperationalError as exc:
+            raise AssertionError(
+                f"SearchCatalogUseCase.execute() raised OperationalError for query {query!r}: {exc}"
+            ) from exc
+    finally:
+        conn.close()

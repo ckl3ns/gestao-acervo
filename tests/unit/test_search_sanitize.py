@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 
 import pytest
 
@@ -22,11 +23,14 @@ _SCHEMA_PATH = (
 
 
 @pytest.fixture()
-def db_conn() -> sqlite3.Connection:
+def db_conn() -> Iterator[sqlite3.Connection]:
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     init_db(conn, _SCHEMA_PATH)
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------

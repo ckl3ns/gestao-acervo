@@ -8,6 +8,7 @@ isolamento entre testes.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -31,17 +32,20 @@ SCHEMA_PATH = Path("src/catalogo_acervo/infrastructure/db/schema.sql")
 
 
 @pytest.fixture()
-def db_conn() -> sqlite3.Connection:
+def db_conn() -> Iterator[sqlite3.Connection]:
     """Conexão SQLite em memória com schema completo aplicado.
 
-    Cada teste recebe uma instância isolada — sem arquivo em disco,
+    Cada teste recebe uma instância isolada - sem arquivo em disco,
     sem estado compartilhado entre casos de teste.
     """
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     init_db(conn, SCHEMA_PATH)
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 @pytest.fixture()

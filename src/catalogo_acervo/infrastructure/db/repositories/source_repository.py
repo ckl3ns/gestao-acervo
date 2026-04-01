@@ -18,7 +18,10 @@ class SourceRepository:
             (source.name, source.source_type, source.parser_name, source.description, int(source.is_active)),
         )
         self.conn.commit()
-        return int(cursor.lastrowid)
+        lastrowid = cursor.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("Falha ao persistir fonte")
+        return int(lastrowid)
 
     def list_all(self) -> list[Source]:
         rows = self.conn.execute("SELECT * FROM sources ORDER BY created_at DESC").fetchall()

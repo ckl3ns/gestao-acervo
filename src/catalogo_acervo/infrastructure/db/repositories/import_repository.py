@@ -18,7 +18,10 @@ class ImportRepository:
             (job.source_id, job.import_mode, job.status, job.raw_file_name),
         )
         self.conn.commit()
-        return int(cursor.lastrowid)
+        lastrowid = cursor.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("Falha ao criar job de importação")
+        return int(lastrowid)
 
     def finish(self, job_id: int, status: str, total_read: int, total_inserted: int, total_updated: int, total_skipped: int, total_errors: int) -> None:
         self.conn.execute(
