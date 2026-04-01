@@ -1,6 +1,6 @@
 # STATUS.md
 
-**Última atualização**: 2026-04-01 (core-hardening concluído em branch de trabalho)  
+**Última atualização**: 2026-04-01 (core-hardening + governança de manutenibilidade concluídos em branch de trabalho)  
 **Projeto**: Catálogo Unificado de Acervo  
 **Modelo operacional**: PO humano + Scrum Master/Tech Lead por agente + equipe de agentes em worktrees isoladas
 
@@ -27,13 +27,13 @@
 - **Matching canônico e idempotente** - pares persistidos como `(min_id, max_id)` e contagem `created` só sobe quando houve inserção real
 - **ImportJob com contadores reais** - inserted/updated/skipped/errors separados
 - **Proteção de falha no parser** - job finalizado como `failed` em caso de exceção
-- **Busca FTS5 sanitizada** - queries de usuário não causam `OperationalError`
+- **Busca FTS5 sanitizada** - queries de usuário, inclusive tokens com hífen, não causam `OperationalError`
 - **Validação precoce de parser** no cadastro da fonte
 - **UI principal alinhada ao núcleo atual** - import usa `SuggestMatchesUseCase` e exibe DTOs/mappers
 - Infraestrutura de dev: ruff, mypy, pytest-cov, pre-commit, pre-push
 - Dependências dev reproduzíveis com `hypothesis` incluído em `.[dev]`
 - Fixtures compartilhadas com fechamento explícito de conexão SQLite
-- **106 testes passando** com cobertura total em **79%**
+- **109 testes passando** com cobertura total em **79%**
 
 ### 🚧 Próximas prioridades
 1. **Revisão manual na UI** - workflow de reconciliação (WI-004)
@@ -55,7 +55,7 @@
 
 | Data | Commit | Entrega |
 |---|---|---|
-| 2026-04-01 | em preparação | fix(core): matching canônico, skip materializado, hooks e UI alinhados |
+| 2026-04-01 | em preparação | fix(core): matching canônico, skip materializado, busca FTS5 segura e governança de manutenibilidade |
 | 2026-04-01 | a994daf | merge: WI-003 concluído (MergePolicy) |
 | 2026-04-01 | 40f71ce | feat(matching): integrar suggest_matches ao pipeline (WI-002) |
 | 2026-04-01 | f62e375 | feat(interfaces): DTOs e mappers (WI-001) |

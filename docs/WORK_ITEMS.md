@@ -12,7 +12,8 @@
 | WI-002 | Integrar matching ao pipeline | ✅ done | main | Trabalhador 1 |
 | WI-003 | Atualização seletiva por fonte | ✅ done | main | Trabalhador 2 |
 | WI-004 | Revisão manual na UI | 📋 todo | — | Aguardando |
-| WI-005 | Core hardening: matching canônico, skip materializado, gates e UI | ✅ done | assistant/core-hardening | ChatGPT |
+| WI-005 | Core hardening: matching canônico, skip materializado, gates, busca segura e UI | ✅ done | assistant/core-hardening | ChatGPT |
+| WI-006 | Governança: tornar manutenibilidade critério explícito para agentes | ✅ done | assistant/core-hardening | ChatGPT |
 
 ---
 
@@ -20,6 +21,7 @@
 
 | ID | Data | Commit | Status |
 |---|---|---|---|
+| WI-006 | 2026-04-01 | em preparação | ✅ Governança atualizada para exigir manutenibilidade junto com testabilidade |
 | WI-005 | 2026-04-01 | em preparação | ✅ Implementado localmente; branch/PR pendentes de publicação |
 | WI-001 | 2026-04-01 | f62e375 | ✅ Concluído |
 | WI-002 | 2026-04-01 | 40f71ce | ✅ Concluído (merge em main) |
@@ -31,7 +33,7 @@
 
 | Branch | Worktree | Escopo | Status |
 |---|---|---|---|
-| assistant/core-hardening | n/a (execução local via snapshot do repositório) | matching canônico, contagem honesta, skip materializado, gates e wiring | pronta para PR |
+| assistant/core-hardening | n/a (execução local via snapshot do repositório) | matching canônico, contagem honesta, skip materializado, busca segura, gates, wiring e governança de manutenibilidade | pronta para PR |
 
 ---
 

@@ -59,14 +59,16 @@ streamlit run app/streamlit_app.py
 4. abrir branch/worktree isolada;
 5. executar mudança pequena;
 6. rodar testes;
-7. registrar progresso;
-8. commitar;
-9. repetir.
+7. checar se a mudança continua legível e fácil de manter;
+8. registrar progresso;
+9. commitar;
+10. repetir.
 
 ## O que não fazer
 - não alterar `main` diretamente;
 - não fazer commits grandes e misturados;
 - não ignorar testes falhando;
+- não aumentar complexidade acidental sem necessidade;
 - não pular atualização dos arquivos de status;
 - não puxar escopo para IA/MCP/deploy antes do núcleo;
 - não gerar documentação ornamental.
