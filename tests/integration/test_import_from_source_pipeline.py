@@ -174,7 +174,7 @@ def test_import_handles_record_errors_gracefully(
         "SELECT status, total_read, total_inserted, total_errors FROM imports ORDER BY id DESC LIMIT 1"
     ).fetchone()
     assert row is not None
-    status, total_read, total_inserted, total_errors = row
+    status, _total_read, total_inserted, total_errors = row
     assert status == "completed_with_errors", f"Esperado 'completed_with_errors', got '{status}'"
     assert total_errors == 1, f"Esperado 1 erro, got {total_errors}"
     assert total_inserted == 1, f"Esperado 1 inserção, got {total_inserted}"

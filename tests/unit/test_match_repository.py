@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
+from catalogo_acervo.domain.entities.catalog_item import CatalogItem
 from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository import (
     CatalogItemRepository,
 )
@@ -20,7 +21,7 @@ def test_add_creates_match_record(
     # Arrange: criar dois itens para satisfazer FK
     item_a = CatalogItem(
         source_id=registered_source_id,
-        source_key="BK-A",
+        source_key="BK-MATCH-A",
         item_type="book",
         title_raw="Título A",
         title_norm="titulo a",
@@ -29,7 +30,7 @@ def test_add_creates_match_record(
     )
     item_b = CatalogItem(
         source_id=registered_source_id,
-        source_key="BK-B",
+        source_key="BK-MATCH-B",
         item_type="book",
         title_raw="Título B",
         title_norm="titulo b",
@@ -39,10 +40,14 @@ def test_add_creates_match_record(
     item_repo.upsert(item_a)
     item_repo.upsert(item_b)
 
+    # Buscar itens para obter IDs gerados pelo banco
+    saved_a = item_repo.get_by_source_and_key(registered_source_id, "BK-MATCH-A")
+    saved_b = item_repo.get_by_source_and_key(registered_source_id, "BK-MATCH-B")
+
     # Act
     match_id = match_repo.add(
-        left_item_id=item_a.id or 0,
-        right_item_id=item_b.id or 0,
+        left_item_id=saved_a.id or 0,
+        right_item_id=saved_b.id or 0,
         score=95.5,
         rule="title+author_fuzzy",
         status="possible",
@@ -53,8 +58,8 @@ def test_add_creates_match_record(
     assert match_id > 0
     row = db_conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
     assert row is not None
-    assert row["left_item_id"] == item_a.id
-    assert row["right_item_id"] == item_b.id
+    assert row["left_item_id"] == saved_a.id
+    assert row["right_item_id"] == saved_b.id
     assert row["match_score"] == 95.5
     assert row["match_rule"] == "title+author_fuzzy"
     assert row["status"] == "possible"
@@ -70,7 +75,7 @@ def test_add_returns_lastrowid(
     """add() deve retornar o id da linha inserida (lastrowid)."""
     item_a = CatalogItem(
         source_id=registered_source_id,
-        source_key="BK-A",
+        source_key="BK-ROWID-A",
         item_type="book",
         title_raw="Título A",
         title_norm="titulo a",
@@ -79,7 +84,7 @@ def test_add_returns_lastrowid(
     )
     item_b = CatalogItem(
         source_id=registered_source_id,
-        source_key="BK-B",
+        source_key="BK-ROWID-B",
         item_type="book",
         title_raw="Título B",
         title_norm="titulo b",
@@ -89,9 +94,12 @@ def test_add_returns_lastrowid(
     item_repo.upsert(item_a)
     item_repo.upsert(item_b)
 
+    saved_a = item_repo.get_by_source_and_key(registered_source_id, "BK-ROWID-A")
+    saved_b = item_repo.get_by_source_and_key(registered_source_id, "BK-ROWID-B")
+
     match_id = match_repo.add(
-        left_item_id=item_a.id or 0,
-        right_item_id=item_b.id or 0,
+        left_item_id=saved_a.id or 0,
+        right_item_id=saved_b.id or 0,
         score=80.0,
         rule="title_fuzzy",
         status="pending",
@@ -108,10 +116,10 @@ def test_add_commits_immediately(
     match_repo: MatchRepository,
     registered_source_id: int,
 ) -> None:
-    """add() deve fazer commit imediatamente para persistir o registro."""
+    """add() deve fazer commit imediatamente — registro fica visível após add()."""
     item_a = CatalogItem(
         source_id=registered_source_id,
-        source_key="BK-A",
+        source_key="BK-COMMIT-A",
         item_type="book",
         title_raw="Título A",
         title_norm="titulo a",
@@ -120,7 +128,7 @@ def test_add_commits_immediately(
     )
     item_b = CatalogItem(
         source_id=registered_source_id,
-        source_key="BK-B",
+        source_key="BK-COMMIT-B",
         item_type="book",
         title_raw="Título B",
         title_norm="titulo b",
@@ -130,21 +138,19 @@ def test_add_commits_immediately(
     item_repo.upsert(item_a)
     item_repo.upsert(item_b)
 
+    saved_a = item_repo.get_by_source_and_key(registered_source_id, "BK-COMMIT-A")
+    saved_b = item_repo.get_by_source_and_key(registered_source_id, "BK-COMMIT-B")
+
+    # add() faz commit internamente — registro já deve estar visível
     match_repo.add(
-        left_item_id=item_a.id or 0,
-        right_item_id=item_b.id or 0,
+        left_item_id=saved_a.id or 0,
+        right_item_id=saved_b.id or 0,
         score=75.0,
         rule="title_fuzzy",
         status="possible",
         confidence_band="medium",
     )
 
-    # Outro connection não deve ver o registro se não tivesse commit
-    conn2 = sqlite3.connect(":memory:")
-    conn2.row_factory = sqlite3.Row
-    conn2.execute("PRAGMA foreign_keys = ON;")
-    # Não vai encontrar pois não compartilha transação
-    # (teste conceitual - em memória isolado)
-    count = conn2.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-    assert count == 0  # Conn2 não vê pois é isolado
-    conn2.close()
+    # Verificar que o registro foi persistido e está visível na mesma conexão
+    count = db_conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
+    assert count == 1
