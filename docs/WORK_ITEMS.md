@@ -18,7 +18,7 @@ Este arquivo controla o trabalho ativo e o handoff entre agentes.
 |---|---|---|---|---|---|
 | WI-001 | DTOs e mappers básicos | todo | crítica | _a designar_ | criar DTOs para CatalogItem, Source, Theme; implementar mappers bidirecionais |
 | WI-002 | Integrar matching ao pipeline de importação | todo | alta | _a designar_ | chamar suggest_matches após upsert; persistir candidatos |
-| WI-003 | Atualização seletiva por fonte | todo | alta | _a designar_ | definir MergePolicy enum; implementar field-level override |
+| WI-003 | Atualização seletiva por fonte | done | alta | agent/upsert-seletivo | MergePolicy enum com REPLACE/MERGE/KEEP_EXISTING; upsert com merge_policy param; 5 novos testes |
 | WI-004 | Revisão manual na UI | todo | média | _a designar_ | depende de WI-002 |
 
 ---
