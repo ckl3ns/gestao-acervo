@@ -67,6 +67,7 @@ Consulte [`docs/STATUS.md`](docs/STATUS.md) para o estado atual e [`docs/MATURIT
 | Arquivo | Conteúdo |
 |---|---|
 | [`INSTRUCTIONS.md`](INSTRUCTIONS.md) | Regras obrigatórias para agentes |
+| [`AGENTS.md`](AGENTS.md) | Contexto operacional resumido do projeto |
 | [`docs/prd.md`](docs/prd.md) | PRD — visão de produto, requisitos e roadmap |
 | [`docs/STATUS.md`](docs/STATUS.md) | Estado atual, prioridades e riscos |
 | [`docs/WORK_ITEMS.md`](docs/WORK_ITEMS.md) | Backlog e handoffs |
