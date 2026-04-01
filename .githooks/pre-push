@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+echo "[pre-push] tests with coverage..."
+python -m pytest --cov --cov-fail-under=70 -q
+
+echo "[pre-push] OK"

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+echo "[pre-commit] ruff lint..."
+python -m ruff check src/ tests/
+
+echo "[pre-commit] running test suite..."
+python -m pytest -q
+
+echo "[pre-commit] OK"
