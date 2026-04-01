@@ -1,6 +1,15 @@
-# Catálogo Unificado de Acervo — Bootstrap
+# Catálogo Unificado de Acervo
 
-Bootstrap inicial local-first do projeto definido no PRD.
+Sistema local-first para consolidar, normalizar e reconciliar acervos digitais e físicos de múltiplas fontes heterogêneas.
+
+## O que faz
+
+- Ingere itens de múltiplas fontes via parsers plugáveis
+- Normaliza metadados e aplica aliases configuráveis
+- Persiste com upsert seletivo por fonte (merge policy por campo)
+- Gera candidatos de matching entre itens de fontes diferentes
+- Permite busca full-text com SQLite FTS5
+- Expõe interface mínima via Streamlit para cadastro, importação e busca
 
 ## Requisitos
 
@@ -14,75 +23,52 @@ source .venv/bin/activate
 pip install -e .[dev]
 ```
 
-## Inicialização do banco
+## Uso
 
-O banco é inicializado automaticamente ao abrir a aplicação Streamlit, ou manualmente com:
+Inicializar banco (feito automaticamente pelo Streamlit, ou manualmente):
 
 ```bash
 python -m catalogo_acervo.infrastructure.db.bootstrap
 ```
 
-## Rodar aplicação
+Rodar aplicação:
 
 ```bash
 streamlit run app/streamlit_app.py
 ```
 
-## Rodar testes
+Rodar testes:
 
 ```bash
 pytest
 ```
 
-## Fluxo mínimo disponível
-
-1. Cadastrar fonte.
-2. Importar CSV mock (`data/samples/mock_source.csv`).
-3. Buscar itens pelo campo normalizado com FTS5.
-4. Criar e listar temas.
-
-## O que este bootstrap entrega — e o que ele não prova
-
-Este repositório é um **bootstrap funcional**: a espinha dorsal arquitetural está
-implementada e o loop de desenvolvimento funciona.
-
-**O que está entregue:**
-- Estrutura de domínio (entidades, value objects, contratos)
-- Pipeline de importação com parser, aliases e upsert com merge policy
-- Matching gerado e persistido após importação
-- DTOs e mappers para desacoplamento UI ↔ domínio
-- Infraestrutura de dev (testes, hooks, cobertura)
-
-**O que ainda não foi provado:**
-- Identidade de item sob reimportações com dados reais
-- Matching funcionando sob crescimento real de acervo
-- Revisão humana fechando o ciclo de reconciliação
-- Ingestão real sem implodir premissas do domínio
-
-Para os critérios verificáveis de saída do bootstrap, consulte
-[docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md).
-
 ## Estrutura
 
-- `app/`: interface Streamlit.
-- `src/catalogo_acervo/application`: casos de uso.
-- `src/catalogo_acervo/domain`: entidades/serviços/contratos.
-- `src/catalogo_acervo/infrastructure`: DB, repositórios, ingestão, logging.
-- `tests/`: unitários e integração.
+```
+src/catalogo_acervo/
+  domain/          # entidades, value objects, contratos, serviços
+  application/     # casos de uso
+  infrastructure/  # banco, repositórios, ingestão, logging
+  interfaces/      # DTOs e mappers
+app/               # interface Streamlit
+tests/             # unitários e integração
+docs/              # arquitetura, decisões, status, workflow
+```
 
-## Workflow de colaboração
+## Estágio atual
 
-A governança operacional do repositório está distribuída nestes arquivos:
-- `INSTRUCTIONS.md`: regras obrigatórias para agentes;
-- `AGENTS.md`: contexto operacional resumido do projeto;
-- `docs/STATUS.md`: estado atual, prioridades e riscos;
-- `docs/WORK_ITEMS.md`: quadro de trabalho e handoffs;
-- `docs/workflow.md`: fluxo detalhado de branches, commits e PRs.
+Este repositório é um **bootstrap funcional**: espinha dorsal arquitetural implementada, loop de desenvolvimento funcionando, caminho crítico com dados reais ainda não provado.
 
-Todo agente deve ler esses arquivos antes de iniciar uma tarefa.
-Esse workflow define:
-- branch por tarefa;
-- commits semânticos e pequenos;
-- handoff por ZIP quando o conector não fechar o ciclo de edição;
-- checklist de PR e de revisão;
-- ordem de ataque do backlog para evitar dispersão em UI/IA/deploy cedo demais.
+Consulte [`docs/STATUS.md`](docs/STATUS.md) para o estado atual e [`docs/MATURITY_CRITERIA.md`](docs/MATURITY_CRITERIA.md) para os critérios de saída do bootstrap.
+
+## Documentação
+
+| Arquivo | Conteúdo |
+|---|---|
+| [`INSTRUCTIONS.md`](INSTRUCTIONS.md) | Regras obrigatórias para agentes |
+| [`docs/STATUS.md`](docs/STATUS.md) | Estado atual, prioridades e riscos |
+| [`docs/WORK_ITEMS.md`](docs/WORK_ITEMS.md) | Backlog e handoffs |
+| [`docs/MATURITY_CRITERIA.md`](docs/MATURITY_CRITERIA.md) | Critérios de saída do bootstrap |
+| [`docs/architecture.md`](docs/architecture.md) | Decisões arquiteturais |
+| [`docs/workflow.md`](docs/workflow.md) | Fluxo de branches, commits e PRs |
