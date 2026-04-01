@@ -14,23 +14,24 @@
 - Cadastro de fontes, importação por fonte com resolução de parser
 - Aliases no pipeline de importação
 - Upsert null-safe com COALESCE
-- **MergePolicy enum (REPLACE, MERGE, KEEP_EXISTING)** — WI-003
+- **DTOs e mappers** — CatalogItemDTO, SourceDTO, mappers bidirecionais (WI-001)
+- **Matching integrado ao pipeline** — suggest_matches chamado após upsert (WI-002)
+- **MergePolicy enum (REPLACE, MERGE, KEEP_EXISTING)** — upsert com merge_policy (WI-003)
 - source_key com extração segura e fallback determinístico
 - MatchScore + ConfidenceBand value objects
 - Infraestrutura de dev: ruff, mypy, pytest-cov, pre-commit, pre-push
 - conftest.py com fixtures compartilhadas
-- **58 testes passando** (validado em 2026-04-01)
+- **58 testes passando, 75% cobertura** (validado em 2026-04-01)
 
 ### 🚧 Próximas prioridades
-1. **DTOs e mappers** — desacoplar Streamlit do domínio
-2. **Matching integrado ao pipeline** — chamar suggest_matches após upsert
-3. **Revisão manual na UI** — workflow de reconciliação
+1. **Revisão manual na UI** — workflow de reconciliação (WI-004)
+2. **Parser real CSV/JSON** — substituir MockParser
+3. **Auditoria** — trilha de decisões de reconciliação
 
 ### ⚠️ Riscos conhecidos
-- `interfaces/dto` e `interfaces/mappers` vazios — Streamlit acessa entidades diretamente
-- `suggest_matches` use case existe mas não é chamado pelo pipeline
+- DTOs/mappers criados mas não usados na UI ainda
 - mypy configurado mas não enforçado em hooks
-- Parser mock é o único disponível (sem parser real CSV/JSON)
+- Parser mock é o único disponível
 
 ---
 
@@ -38,9 +39,10 @@
 
 | Data | Commit | Entrega |
 |---|---|---|
+| 2026-04-01 | a994daf | merge: WI-003 concluído (MergePolicy) |
+| 2026-04-01 | 40f71ce | feat(matching): integrar suggest_matches ao pipeline (WI-002) |
+| 2026-04-01 | f62e375 | feat(interfaces): DTOs e mappers (WI-001) |
 | 2026-04-01 | 0e885ee | feat(upsert): adicionar merge policy por campo (WI-003) |
-| 2026-04-01 | cb20120 | fix(app): corrigir SuggestMatchesUseCase e adicionar testes de MatchRepository |
-| 2026-03-30 | 69ec452 | chore: V0 — bootstrap integrado com infra agentica |
 
 ---
 
