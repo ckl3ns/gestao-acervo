@@ -14,21 +14,42 @@ class SuggestMatchesUseCase:
 
     def execute(self, threshold: float = 85.0, affected_item_ids: list[int] | None = None) -> int:
         items = self.items_repo.list_all()
-        if affected_item_ids is not None:
-            affected_set = set(affected_item_ids)
-            candidates = [i for i in items if i.id in affected_set]
-        else:
-            candidates = items
+        affected_set = set(affected_item_ids) if affected_item_ids is not None else None
         created = 0
-        for left in candidates:
+        processed_pairs: set[tuple[int, int]] = set()
+
+        for left in items:
+            left_id = left.id
+            if left_id is None:
+                continue
+            if affected_set is not None and left_id not in affected_set:
+                continue
+
             for right in items:
-                if left.id == right.id or left.source_id == right.source_id:
+                right_id = right.id
+                if right_id is None:
                     continue
+                if left_id == right_id or left.source_id == right.source_id:
+                    continue
+
+                pair = MatchRepository.canonicalize_pair(left_id, right_id)
+                if pair in processed_pairs:
+                    continue
+                processed_pairs.add(pair)
+
                 match_result = suggest_match(left, right)
-                if match_result.score >= threshold:
-                    band_value = match_result.band.value
-                    self.match_repo.add(
-                        left.id or 0, right.id or 0, match_result.score, match_result.rule, "possible", band_value
-                    )
+                if match_result.score < threshold:
+                    continue
+
+                band_value = match_result.band.value
+                persisted_id = self.match_repo.add(
+                    pair[0],
+                    pair[1],
+                    match_result.score,
+                    match_result.rule,
+                    "possible",
+                    band_value,
+                )
+                if persisted_id is not None:
                     created += 1
         return created

@@ -39,11 +39,6 @@ def _insert_source(conn: sqlite3.Connection, name: str) -> int:
     return int(cursor.lastrowid)
 
 
-# ---------------------------------------------------------------------------
-# Property 4: Idempotência do matching
-# Validates: Requirements 2.3, 2.4
-# ---------------------------------------------------------------------------
-
 @settings(max_examples=100)
 @given(
     st.lists(
@@ -53,54 +48,44 @@ def _insert_source(conn: sqlite3.Connection, name: str) -> int:
     )
 )
 def test_property_match_idempotence(titles: list[str]) -> None:
-    """Running SuggestMatchesUseCase.execute() twice must not change the match count.
-
-    # Feature: core-integrity-fixes, Property 4: match idempotence
-    Validates: Requirements 2.3, 2.4
-    """
+    """Running SuggestMatchesUseCase.execute() twice must not change the match count."""
     conn = _make_conn()
+    try:
+        source_a_id = _insert_source(conn, "SourceA")
+        source_b_id = _insert_source(conn, "SourceB")
 
-    source_a_id = _insert_source(conn, "SourceA")
-    source_b_id = _insert_source(conn, "SourceB")
+        item_repo = CatalogItemRepository(conn)
+        match_repo = MatchRepository(conn)
 
-    item_repo = CatalogItemRepository(conn)
-    match_repo = MatchRepository(conn)
+        mid = max(1, len(titles) // 2)
+        titles_a = titles[:mid]
+        titles_b = titles[mid:]
 
-    # Split titles: first half → source A, second half → source B
-    mid = max(1, len(titles) // 2)
-    titles_a = titles[:mid]
-    titles_b = titles[mid:]
+        for idx, title in enumerate(titles_a):
+            item = CatalogItem(
+                source_id=source_a_id,
+                source_key=f"a-{idx}",
+                title_raw=title,
+                raw_record_json={"title": title, "source_key": f"a-{idx}"},
+            )
+            item_repo.upsert(item)
 
-    for idx, title in enumerate(titles_a):
-        item = CatalogItem(
-            source_id=source_a_id,
-            source_key=f"a-{idx}",
-            title_raw=title,
-            raw_record_json={"title": title, "source_key": f"a-{idx}"},
-        )
-        item_repo.upsert(item)
+        for idx, title in enumerate(titles_b):
+            item = CatalogItem(
+                source_id=source_b_id,
+                source_key=f"b-{idx}",
+                title_raw=title,
+                raw_record_json={"title": title, "source_key": f"b-{idx}"},
+            )
+            item_repo.upsert(item)
 
-    for idx, title in enumerate(titles_b):
-        item = CatalogItem(
-            source_id=source_b_id,
-            source_key=f"b-{idx}",
-            title_raw=title,
-            raw_record_json={"title": title, "source_key": f"b-{idx}"},
-        )
-        item_repo.upsert(item)
+        use_case = SuggestMatchesUseCase(items_repo=item_repo, match_repo=match_repo)
+        use_case.execute()
+        count_after_first = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
 
-    use_case = SuggestMatchesUseCase(items_repo=item_repo, match_repo=match_repo)
+        use_case.execute()
+        count_after_second = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
 
-    # First full scan
-    use_case.execute()
-    count_after_first = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-
-    # Second full scan — must not add new rows (INSERT OR IGNORE prevents duplicates)
-    use_case.execute()
-    count_after_second = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-
-    assert count_after_second == count_after_first, (
-        f"Match count changed after second run: "
-        f"first={count_after_first}, second={count_after_second}. "
-        f"Idempotence violated with titles={titles!r}"
-    )
+        assert count_after_second == count_after_first
+    finally:
+        conn.close()
