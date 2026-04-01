@@ -1,4 +1,4 @@
-"""Streamlit app — Catálogo Unificado de Acervo (Bootstrap).
+"""Streamlit app - Catálogo Unificado de Acervo (Bootstrap).
 
 Conexão SQLite cacheada com @st.cache_resource para evitar que cada
 interação do usuário recrie a conexão do zero.
@@ -18,6 +18,7 @@ from catalogo_acervo.application.use_cases.import_source_items_from_source impor
 from catalogo_acervo.application.use_cases.list_sources import ListSourcesUseCase
 from catalogo_acervo.application.use_cases.register_source import RegisterSourceUseCase
 from catalogo_acervo.application.use_cases.search_catalog import SearchCatalogUseCase
+from catalogo_acervo.application.use_cases.suggest_matches import SuggestMatchesUseCase
 from catalogo_acervo.config.settings import get_settings
 from catalogo_acervo.infrastructure.db.connection import get_connection, init_db
 from catalogo_acervo.infrastructure.db.repositories.alias_repository import AliasRepository
@@ -25,6 +26,7 @@ from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository impo
     CatalogItemRepository,
 )
 from catalogo_acervo.infrastructure.db.repositories.import_repository import ImportRepository
+from catalogo_acervo.infrastructure.db.repositories.match_repository import MatchRepository
 from catalogo_acervo.infrastructure.db.repositories.source_lookup_repository import (
     SourceLookupRepository,
 )
@@ -33,6 +35,8 @@ from catalogo_acervo.infrastructure.db.repositories.theme_repository import Them
 from catalogo_acervo.infrastructure.ingestion.parser_registry import ParserRegistry
 from catalogo_acervo.infrastructure.ingestion.parsers.mock_parser import MockParser
 from catalogo_acervo.infrastructure.logging.processing_logger import ProcessingLogger
+from catalogo_acervo.interfaces.mappers.catalog_item_mapper import CatalogItemMapper
+from catalogo_acervo.interfaces.mappers.source_mapper import SourceMapper
 
 _SCHEMA_PATH = Path(__file__).resolve().parents[1] / "src/catalogo_acervo/infrastructure/db/schema.sql"
 
@@ -66,9 +70,11 @@ def _build_use_cases(
     alias_repo = AliasRepository(conn)
     item_repo = CatalogItemRepository(conn)
     import_repo = ImportRepository(conn)
+    match_repo = MatchRepository(conn)
     theme_repo = ThemeRepository(conn)
     logger = ProcessingLogger(conn)
     parser_registry = ParserRegistry([MockParser()])
+    suggest_matches_uc = SuggestMatchesUseCase(item_repo, match_repo)
 
     import_uc = ImportSourceItemsFromSourceUseCase(
         source_lookup=source_lookup,
@@ -77,9 +83,10 @@ def _build_use_cases(
         import_repository=import_repo,
         item_repository=item_repo,
         logger=logger,
+        suggest_matches_use_case=suggest_matches_uc,
     )
     return (
-        RegisterSourceUseCase(source_repo),
+        RegisterSourceUseCase(source_repo, parser_registry),
         ListSourcesUseCase(source_repo),
         import_uc,
         SearchCatalogUseCase(item_repo),
@@ -90,24 +97,26 @@ def _build_use_cases(
 
 def main() -> None:
     conn = _get_db_connection()
-    register_source, list_sources, import_uc, search_uc, theme_uc, alias_repo = (
-        _build_use_cases(conn)
-    )
+    register_source, list_sources, import_uc, search_uc, theme_uc, alias_repo = _build_use_cases(conn)
 
-    st.title("Catálogo Unificado de Acervo — Bootstrap")
-    st.caption("Importação resolvida por fonte, com parser registrado e aliases aplicados.")
+    st.title("Catálogo Unificado de Acervo - Bootstrap")
+    st.caption("Importação resolvida por fonte, com parser registrado, aliases aplicados e matching incremental.")
 
     with st.expander("Cadastrar fonte"):
         name = st.text_input("Nome da fonte")
         source_type = st.text_input("Tipo", value="biblioteca_digital")
         parser_name = st.text_input("Parser", value="mock_csv")
         if st.button("Salvar fonte"):
-            register_source.execute(name=name, source_type=source_type, parser_name=parser_name)
-            st.success("Fonte cadastrada")
+            try:
+                register_source.execute(name=name, source_type=source_type, parser_name=parser_name)
+            except ValueError as exc:
+                st.error(str(exc))
+            else:
+                st.success("Fonte cadastrada")
 
-    sources = list_sources.execute()
+    sources = [SourceMapper.to_dto(source).model_dump() for source in list_sources.execute()]
     st.subheader("Fontes cadastradas")
-    st.write([s.model_dump() for s in sources])
+    st.write(sources)
 
     with st.expander("Aliases"):
         alias_kind = st.selectbox("Tipo de alias", options=["title", "author", "series", "publisher"])
@@ -141,8 +150,8 @@ def main() -> None:
     st.subheader("Busca")
     query = st.text_input("Buscar (FTS5)", value="teologia")
     if st.button("Buscar"):
-        result = search_uc.execute(query)
-        st.write([item.model_dump() for item in result])
+        result = [CatalogItemMapper.to_dto(item).model_dump() for item in search_uc.execute(query)]
+        st.write(result)
 
     with st.expander("Temas"):
         theme_name = st.text_input("Novo tema", value="Teologia")
