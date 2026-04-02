@@ -15,7 +15,7 @@
 | WI-005 | Core hardening: matching canônico, skip materializado, gates, busca segura e UI | ✅ done | main | ChatGPT |
 | WI-006 | Governança: tornar manutenibilidade critério explícito para agentes | ✅ done | main | ChatGPT |
 | WI-007 | Parser Logos bootstrap: formato real, documentação e fixtures | ✅ done | main | ChatGPT |
-| WI-008 | Housekeeping pós-merge: saneamento Git + reconciliação documental | ✅ ready_for_pr | assistant/repo-housekeeping | OpenCode |
+| WI-008 | Housekeeping pós-merge: saneamento Git + reconciliação documental | ✅ done | main | OpenCode |
 
 ---
 
@@ -23,7 +23,7 @@
 
 | ID | Data | Commit | Status |
 |---|---|---|---|
-| WI-008 | 2026-04-02 | 5aaae51 | ✅ Branch de housekeeping pronta para revisão com checks locais aprovados |
+| WI-008 | 2026-04-02 | a18616d | ✅ Merge PR #7 em `main`; fechamento operacional concluído |
 | WI-007 | 2026-04-02 | 2bed35a | ✅ Merge PR #6 em `main` com parser real `logos_csv`, documentação de formato e fixtures |
 | WI-006 | 2026-04-01 | a73963d | ✅ Governança atualizada para exigir manutenibilidade junto com testabilidade |
 | WI-005 | 2026-04-01 | 8fac35c | ✅ Core hardening mergeado em main |
@@ -37,13 +37,12 @@
 
 | Branch | Worktree | Escopo | Status |
 |---|---|---|---|
-| assistant/repo-housekeeping | C:/workspace/tmp/gestao-acervo | saneamento pós-merge: auditoria de branches, reconciliação documental e validação operacional | pronta para revisão |
+| — | — | — | nenhuma worktree de tarefa ativa registrada |
 
 ---
 
 ## Próximos Passos
 
 - WI-004: Revisão manual na UI
-- Mergear WI-008 em `main` e remover branch temporária após validação humana
 - Estratégia de identidade estável para fontes sem ID confiável
 - Próximo parser real depois da validação do Logos
