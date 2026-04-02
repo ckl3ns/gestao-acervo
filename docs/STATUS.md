@@ -1,6 +1,6 @@
 # STATUS.md
 
-**Última atualização**: 2026-04-01 (core-hardening + governança de manutenibilidade concluídos em branch de trabalho)  
+**Última atualização**: 2026-04-02 (parser Logos bootstrap preparado para PR)  
 **Projeto**: Catálogo Unificado de Acervo  
 **Modelo operacional**: PO humano + Scrum Master/Tech Lead por agente + equipe de agentes em worktrees isoladas
 
@@ -11,7 +11,7 @@
 ### ✅ Concluído e funcional no bootstrap
 
 > Os itens abaixo estão implementados e testados no contexto do bootstrap local-first.
-> Nenhum deles foi validado com dados reais em escala operacional.
+> Nem todos foram revalidados em CI após a preparação do parser Logos nesta entrega.
 > Consulte [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md) para os critérios de saída do bootstrap.
 
 - Bootstrap local-first com SQLite + FTS5
@@ -30,23 +30,25 @@
 - **Busca FTS5 sanitizada** - queries de usuário, inclusive tokens com hífen, não causam `OperationalError`
 - **Validação precoce de parser** no cadastro da fonte
 - **UI principal alinhada ao núcleo atual** - import usa `SuggestMatchesUseCase` e exibe DTOs/mappers
+- Parser real `logos_csv` para exportações CSV do Logos 7 e Logos 10
+- Documentação explícita do formato CSV observado em `docs/formats/logos_csv.md`
+- Fixtures pequenas derivadas de arquivos reais em `data/samples/`
+- Fixtures de overlap entre Logos 7 e 10 para testes de matching
 - Infraestrutura de dev: ruff, mypy, pytest-cov, pre-commit, pre-push
-- Dependências dev reproduzíveis com `hypothesis` incluído em `.[dev]`
-- Fixtures compartilhadas com fechamento explícito de conexão SQLite
-- **109 testes passando** com cobertura total em **79%**
 
 ### 🚧 Próximas prioridades
 1. **Revisão manual na UI** - workflow de reconciliação (WI-004)
-2. **Parser real CSV/JSON** - substituir MockParser
+2. **Executar a suíte completa e reconciliar métricas de qualidade** - regenerar números de cobertura e conformidade
 3. **Identidade estável além do fallback por hash** - evitar tratar alteração de conteúdo como novo item quando a fonte não fornece ID estável
 4. **Auditoria operacional mínima** - trilha legível para decisões de matching e revisão manual
-5. **Usar DTOs/mappers de forma mais ampla na interface**
+5. **Expandir parsers reais** - depois do Logos, CSV/JSON adicionais e outras fontes
 
 ### ⚠️ Riscos conhecidos
-- Parser mock ainda é o único parser disponível
+- O parser Logos já aceita as duas variantes observadas, mas ainda não prova todas as variantes que o software pode exportar
 - Fallback por hash continua sendo estratégia de emergência, não identidade estável longitudinal
-- Caminho crítico com dados reais não provado - ver [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md)
-- Cobertura total aceitável não elimina áreas ainda sem exercício relevante (manual_review, match entity, processing_log entity)
+- Caminho crítico com dados reais ainda não foi fechado ponta a ponta por revisão humana
+- `docs/conformidade.md` precisa ser tratado como snapshot histórico até nova execução completa da suíte
+- Cobertura histórica aceitável não elimina áreas ainda sem exercício relevante (manual_review, match entity, processing_log entity)
 - Linguagem de "funcional" não implica "operacionalmente confiável"
 
 ---
@@ -55,11 +57,11 @@
 
 | Data | Commit | Entrega |
 |---|---|---|
-| 2026-04-01 | em preparação | fix(core): matching canônico, skip materializado, busca FTS5 segura e governança de manutenibilidade |
+| 2026-04-02 | preparação local/branch | feat(parser): primeira camada de parser real para Logos 7/10 com documentação de formato e fixtures derivadas de arquivos reais |
+| 2026-04-01 | 8fac35c | merge: core hardening e governança de manutenibilidade |
 | 2026-04-01 | a994daf | merge: WI-003 concluído (MergePolicy) |
 | 2026-04-01 | 40f71ce | feat(matching): integrar suggest_matches ao pipeline (WI-002) |
 | 2026-04-01 | f62e375 | feat(interfaces): DTOs e mappers (WI-001) |
-| 2026-04-01 | 0e885ee | feat(upsert): adicionar merge policy por campo (WI-003) |
 
 ---
 
