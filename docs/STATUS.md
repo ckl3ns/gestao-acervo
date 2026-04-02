@@ -1,6 +1,6 @@
 # STATUS.md
 
-**Última atualização**: 2026-04-02 (parser Logos bootstrap preparado para PR)  
+**Última atualização**: 2026-04-02 (reconciliação pós-merge do parser Logos e saneamento documental)  
 **Projeto**: Catálogo Unificado de Acervo  
 **Modelo operacional**: PO humano + Scrum Master/Tech Lead por agente + equipe de agentes em worktrees isoladas
 
@@ -11,7 +11,7 @@
 ### ✅ Concluído e funcional no bootstrap
 
 > Os itens abaixo estão implementados e testados no contexto do bootstrap local-first.
-> Nem todos foram revalidados em CI após a preparação do parser Logos nesta entrega.
+> Nem todos os indicadores foram revalidados em CI após o merge do parser Logos.
 > Consulte [docs/MATURITY_CRITERIA.md](docs/MATURITY_CRITERIA.md) para os critérios de saída do bootstrap.
 
 - Bootstrap local-first com SQLite + FTS5
@@ -57,7 +57,7 @@
 
 | Data | Commit | Entrega |
 |---|---|---|
-| 2026-04-02 | preparação local/branch | feat(parser): primeira camada de parser real para Logos 7/10 com documentação de formato e fixtures derivadas de arquivos reais |
+| 2026-04-02 | 2bed35a | merge PR #6: parser real `logos_csv` para Logos 7/10 com documentação de formato e fixtures derivadas de arquivos reais |
 | 2026-04-01 | 8fac35c | merge: core hardening e governança de manutenibilidade |
 | 2026-04-01 | a994daf | merge: WI-003 concluído (MergePolicy) |
 | 2026-04-01 | 40f71ce | feat(matching): integrar suggest_matches ao pipeline (WI-002) |

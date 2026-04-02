@@ -1,6 +1,6 @@
 # Lições Aprendidas
 
-**Última atualização**: 2026-04-01
+**Última atualização**: 2026-04-02
 
 ---
 
@@ -114,8 +114,8 @@
 
 ---
 
-## Revisões Necesstárias no Processo
+## Revisões Necessárias no Processo
 
-- [ ] workflow.md: adicionar seção de "Branch lifecycle" (criar → trabalho → merge → delete)
-- [ ] workflow.md: adicionar checklist de "antes de abandonar worktree"
+- [x] workflow.md: adicionar seção de "Branch lifecycle" (criar → trabalho → merge → delete)
+- [x] workflow.md: adicionar checklist de "antes de abandonar worktree"
 - [ ] STATUS.md: regra de atualização deve mencionar reconciliação com git log
