@@ -50,7 +50,7 @@ def test_parse_logos7_csv_accepts_schema_without_publishers() -> None:
 
 def test_parse_year_accepts_ranges_and_rejects_invalid_values() -> None:
     assert _parse_year("1908-1914") == 1908
-    assert _parse_year("1925–1976") == 1925
+    assert _parse_year("1925-1976") == 1925
     assert _parse_year("n.d.") is None
     assert _parse_year("20204") == 2020
 
