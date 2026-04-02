@@ -25,6 +25,7 @@ from catalogo_acervo.infrastructure.db.repositories.source_lookup_repository imp
 )
 from catalogo_acervo.infrastructure.db.repositories.source_repository import SourceRepository
 from catalogo_acervo.infrastructure.ingestion.parser_registry import ParserRegistry
+from catalogo_acervo.infrastructure.ingestion.parsers.logos_csv_parser import LogosCsvParser
 from catalogo_acervo.infrastructure.ingestion.parsers.mock_parser import MockParser
 from catalogo_acervo.infrastructure.logging.processing_logger import ProcessingLogger
 
@@ -85,7 +86,7 @@ def logger(db_conn: sqlite3.Connection) -> ProcessingLogger:
 
 @pytest.fixture()
 def parser_registry() -> ParserRegistry:
-    return ParserRegistry([MockParser()])
+    return ParserRegistry([MockParser(), LogosCsvParser()])
 
 
 @pytest.fixture()

@@ -33,6 +33,7 @@ from catalogo_acervo.infrastructure.db.repositories.source_lookup_repository imp
 from catalogo_acervo.infrastructure.db.repositories.source_repository import SourceRepository
 from catalogo_acervo.infrastructure.db.repositories.theme_repository import ThemeRepository
 from catalogo_acervo.infrastructure.ingestion.parser_registry import ParserRegistry
+from catalogo_acervo.infrastructure.ingestion.parsers.logos_csv_parser import LogosCsvParser
 from catalogo_acervo.infrastructure.ingestion.parsers.mock_parser import MockParser
 from catalogo_acervo.infrastructure.logging.processing_logger import ProcessingLogger
 from catalogo_acervo.interfaces.mappers.catalog_item_mapper import CatalogItemMapper
@@ -73,7 +74,7 @@ def _build_use_cases(
     match_repo = MatchRepository(conn)
     theme_repo = ThemeRepository(conn)
     logger = ProcessingLogger(conn)
-    parser_registry = ParserRegistry([MockParser()])
+    parser_registry = ParserRegistry([MockParser(), LogosCsvParser()])
     suggest_matches_uc = SuggestMatchesUseCase(item_repo, match_repo)
 
     import_uc = ImportSourceItemsFromSourceUseCase(
@@ -100,12 +101,15 @@ def main() -> None:
     register_source, list_sources, import_uc, search_uc, theme_uc, alias_repo = _build_use_cases(conn)
 
     st.title("Catálogo Unificado de Acervo - Bootstrap")
-    st.caption("Importação resolvida por fonte, com parser registrado, aliases aplicados e matching incremental.")
+    st.caption(
+        "Importação resolvida por fonte, com parser registrado, aliases aplicados, matching incremental "
+        "e primeira camada de parser real para exportações Logos."
+    )
 
     with st.expander("Cadastrar fonte"):
         name = st.text_input("Nome da fonte")
         source_type = st.text_input("Tipo", value="biblioteca_digital")
-        parser_name = st.text_input("Parser", value="mock_csv")
+        parser_name = st.text_input("Parser", value="logos_csv")
         if st.button("Salvar fonte"):
             try:
                 register_source.execute(name=name, source_type=source_type, parser_name=parser_name)
@@ -122,7 +126,7 @@ def main() -> None:
         alias_kind = st.selectbox("Tipo de alias", options=["title", "author", "series", "publisher"])
         alias_text = st.text_input("Alias")
         canonical_text = st.text_input("Canônico")
-        source_scope = st.text_input("Escopo do parser (opcional)", value="mock_csv")
+        source_scope = st.text_input("Escopo do parser (opcional)", value="logos_csv")
         if st.button("Salvar alias"):
             alias_id = alias_repo.upsert(
                 alias_kind=alias_kind,
@@ -135,7 +139,10 @@ def main() -> None:
 
     with st.expander("Importar arquivo"):
         source_id_input = st.number_input("Source ID", min_value=1, step=1)
-        file_path_input = st.text_input("Caminho do arquivo", value="data/samples/mock_source.csv")
+        file_path_input = st.text_input(
+            "Caminho do arquivo",
+            value="data/samples/logos10_matching_sample.csv",
+        )
         if st.button("Importar"):
             try:
                 job_id = import_uc.execute(
