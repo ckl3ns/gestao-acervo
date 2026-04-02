@@ -1,6 +1,6 @@
 # STATUS.md
 
-**Última atualização**: 2026-04-02 (reconciliação pós-merge do parser Logos; WI-008 em andamento)  
+**Última atualização**: 2026-04-02 (reconciliação pós-merge do parser Logos e saneamento documental)  
 **Projeto**: Catálogo Unificado de Acervo  
 **Modelo operacional**: PO humano + Scrum Master/Tech Lead por agente + equipe de agentes em worktrees isoladas
 
