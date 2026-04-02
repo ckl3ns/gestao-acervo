@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import sqlite3
 
-import pytest
-
 from catalogo_acervo.domain.entities.import_job import ImportJob
 from catalogo_acervo.infrastructure.db.repositories.import_repository import ImportRepository
 

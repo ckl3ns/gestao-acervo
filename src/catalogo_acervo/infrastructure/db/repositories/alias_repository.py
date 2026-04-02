@@ -33,16 +33,17 @@ class AliasRepository:
         ).fetchone()
 
         if existing:
+            alias_id = int(existing["id"])
             self.conn.execute(
                 """
                 UPDATE aliases
                 SET canonical_text = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (normalized_canonical, int(existing["id"])),
+                (normalized_canonical, alias_id),
             )
             self.conn.commit()
-            return int(existing["id"])
+            return alias_id
 
         cursor = self.conn.execute(
             """
@@ -52,7 +53,10 @@ class AliasRepository:
             (alias_kind, normalized_alias, normalized_canonical, source_scope),
         )
         self.conn.commit()
-        return int(cursor.lastrowid)
+        lastrowid = cursor.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("Falha ao persistir alias")
+        return int(lastrowid)
 
     def list_active(self) -> list[Alias]:
         rows = self.conn.execute(

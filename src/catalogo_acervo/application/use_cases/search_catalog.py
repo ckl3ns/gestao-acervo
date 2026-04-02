@@ -8,26 +8,28 @@ from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository impo
 )
 
 # Operadores booleanos FTS5 isolados (sem palavras ao redor)
-_FTS5_BOOL_OPS = re.compile(r'\b(AND|OR|NOT)\b', re.IGNORECASE)
+_FTS5_BOOL_OPS = re.compile(r"\b(AND|OR|NOT)\b", re.IGNORECASE)
+_FTS5_TOKEN_PATTERN = re.compile(r"[\w]+(?:-[\w]+)*")
 
 
 def _sanitize_fts5_query(query: str) -> str:
     """Sanitiza query para uso seguro no SQLite FTS5.
 
-    Estratégia defensiva: extrai apenas palavras alfanuméricas (e hífens
-    internos), descartando qualquer caractere que o FTS5 possa interpretar
-    como operador ou delimitador especial. Isso garante que nenhuma entrada
-    do usuário cause OperationalError, ao custo de não suportar sintaxe FTS5
-    avançada via UI.
+    Estratégia defensiva: extrai tokens textuais simples e os quota
+    individualmente antes de enviá-los ao FTS5. Isso impede que entradas do
+    usuário sejam interpretadas como sintaxe especial de MATCH, inclusive em
+    casos como ``0-0`` ou ``abc-def``.
     """
     if not query or not query.strip():
         return ""
 
-    # Extrair apenas tokens de palavra (letras, dígitos, underscore, hífen interno)
-    words = re.findall(r'\b[\w][\w\-]*\b', query)
-    # Remover operadores booleanos isolados
-    words = [w for w in words if not _FTS5_BOOL_OPS.fullmatch(w)]
-    return ' '.join(words).strip()
+    safe_tokens: list[str] = []
+    for token in _FTS5_TOKEN_PATTERN.findall(query):
+        if _FTS5_BOOL_OPS.fullmatch(token):
+            continue
+        escaped = token.replace('"', '""')
+        safe_tokens.append(f'"{escaped}"')
+    return " ".join(safe_tokens).strip()
 
 
 class SearchCatalogUseCase:

@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import sqlite3
 
-import pytest
-
 from catalogo_acervo.application.use_cases.suggest_matches import SuggestMatchesUseCase
 from catalogo_acervo.domain.entities.catalog_item import CatalogItem
 from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository import (
@@ -36,15 +34,11 @@ def test_suggest_matches_incremental_only_processes_affected(
     item_repo: CatalogItemRepository,
     match_repo: MatchRepository,
 ) -> None:
-    """Apenas IDs afetados são processados; itens fora do conjunto não geram matches.
-
-    Validates: Requirements 2.3, 2.4
-    """
+    """Apenas IDs afetados são processados; itens fora do conjunto não geram matches."""
     source_a_id = _insert_source(db_conn, "Source A", "mock_csv_a")
     source_b_id = _insert_source(db_conn, "Source B", "mock_csv_b")
 
-    # item_a e item_b têm títulos e autores idênticos → score 100 (> threshold 85)
-    item_a = item_repo.upsert(
+    item_a_id, _ = item_repo.upsert(
         CatalogItem(
             source_id=source_a_id,
             source_key="key-a",
@@ -56,7 +50,7 @@ def test_suggest_matches_incremental_only_processes_affected(
             raw_record_json={},
         )
     )
-    item_b = item_repo.upsert(
+    item_repo.upsert(
         CatalogItem(
             source_id=source_b_id,
             source_key="key-b",
@@ -68,9 +62,7 @@ def test_suggest_matches_incremental_only_processes_affected(
             raw_record_json={},
         )
     )
-
-    # item_c tem título completamente diferente e NÃO está em affected_item_ids
-    item_c = item_repo.upsert(
+    item_c_id, _ = item_repo.upsert(
         CatalogItem(
             source_id=source_a_id,
             source_key="key-c",
@@ -83,26 +75,21 @@ def test_suggest_matches_incremental_only_processes_affected(
         )
     )
 
-    item_a_id, _ = item_a
-    item_b_id, _ = item_b
-    item_c_id, _ = item_c
-
     suggest_uc = SuggestMatchesUseCase(item_repo, match_repo)
-    suggest_uc.execute(affected_item_ids=[item_a_id])
+    created = suggest_uc.execute(affected_item_ids=[item_a_id])
 
-    # item_a × item_b devem ter gerado um match (títulos idênticos → score 100)
-    matches_involving_a_b = db_conn.execute(
+    matches_involving_a = db_conn.execute(
         "SELECT COUNT(*) FROM matches WHERE left_item_id = ? OR right_item_id = ?",
         (item_a_id, item_a_id),
     ).fetchone()[0]
-    assert matches_involving_a_b >= 1, "Esperava ao menos um match entre item_a e item_b"
+    assert created == 1
+    assert matches_involving_a == 1
 
-    # item_c não estava em affected_item_ids → nenhum match deve envolvê-lo
     matches_involving_c = db_conn.execute(
         "SELECT COUNT(*) FROM matches WHERE left_item_id = ? OR right_item_id = ?",
         (item_c_id, item_c_id),
     ).fetchone()[0]
-    assert matches_involving_c == 0, "item_c não deveria ter sido processado (não estava em affected_item_ids)"
+    assert matches_involving_c == 0
 
 
 def test_suggest_matches_idempotent_on_no_change(
@@ -110,10 +97,7 @@ def test_suggest_matches_idempotent_on_no_change(
     item_repo: CatalogItemRepository,
     match_repo: MatchRepository,
 ) -> None:
-    """Segunda execução sem mudança não cria novas linhas (INSERT OR IGNORE).
-
-    Validates: Requirements 2.5
-    """
+    """Segunda execução sem mudança não cria novas linhas."""
     source_a_id = _insert_source(db_conn, "Source A", "mock_csv_a")
     source_b_id = _insert_source(db_conn, "Source B", "mock_csv_b")
 
@@ -144,13 +128,13 @@ def test_suggest_matches_idempotent_on_no_change(
 
     suggest_uc = SuggestMatchesUseCase(item_repo, match_repo)
 
-    suggest_uc.execute()
+    created_first = suggest_uc.execute()
     count_after_first = _count_matches(db_conn)
 
-    suggest_uc.execute()
+    created_second = suggest_uc.execute()
     count_after_second = _count_matches(db_conn)
 
-    assert count_after_first > 0, "Esperava ao menos um match após a primeira execução"
-    assert count_after_second == count_after_first, (
-        "Segunda execução não deve criar duplicatas (INSERT OR IGNORE deve prevenir isso)"
-    )
+    assert created_first == 1
+    assert count_after_first == 1
+    assert created_second == 0
+    assert count_after_second == count_after_first

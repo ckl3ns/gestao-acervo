@@ -1,18 +1,21 @@
-.PHONY: test lint format quality install-hooks run coverage
+.PHONY: test lint typecheck format quality install-hooks run coverage
 
 test:
 	python -m pytest -q
 
 lint:
-	python -m ruff check src/ tests/
+	python -m ruff check src/ tests/ app/
+
+typecheck:
+	python -m mypy src
 
 format:
-	python -m ruff check src/ tests/ --fix
+	python -m ruff check src/ tests/ app/ --fix
 
 coverage:
 	python -m pytest --cov --cov-report=term-missing -q
 
-quality: lint test
+quality: lint typecheck test
 
 install-hooks:
 	./scripts/install-hooks.sh

@@ -1,6 +1,8 @@
-"""Testes unitários: CatalogItemRepository — foco no upsert null-safe."""
+"""Testes unitários: CatalogItemRepository - foco no upsert null-safe."""
 
 from __future__ import annotations
+
+from typing import Any
 
 from catalogo_acervo.domain.entities.catalog_item import CatalogItem
 from catalogo_acervo.domain.value_objects.merge_policy import MergePolicy
@@ -10,7 +12,7 @@ from catalogo_acervo.infrastructure.db.repositories.catalog_item_repository impo
 
 
 def _make_item(source_id: int, **kwargs: object) -> CatalogItem:
-    defaults: dict = {
+    defaults: dict[str, Any] = {
         "source_id": source_id,
         "source_key": "BK-001",
         "title_raw": "Título Original",
@@ -21,10 +23,18 @@ def _make_item(source_id: int, **kwargs: object) -> CatalogItem:
         "current_import_id": None,
     }
     defaults.update(kwargs)
-    # Ensure raw_record_json reflects the item's fields so skip detection works correctly
     if "raw_record_json" not in kwargs:
         defaults["raw_record_json"] = {k: str(v) for k, v in defaults.items() if v is not None}
-    return CatalogItem(**defaults)  # type: ignore[arg-type]
+    return CatalogItem(**defaults)
+
+def _make_import_job(item_repo: CatalogItemRepository, source_id: int) -> int:
+    conn = item_repo.conn
+    cursor = conn.execute(
+        "INSERT INTO imports (source_id, import_mode, status) VALUES (?, ?, ?)",
+        (source_id, "upsert", "running"),
+    )
+    conn.commit()
+    return int(cursor.lastrowid)
 
 
 def test_upsert_inserts_new_item(
@@ -82,7 +92,7 @@ def test_upsert_always_updates_title_raw(
     item_repo: CatalogItemRepository,
     registered_source_id: int,
 ) -> None:
-    """title_raw é campo obrigatório — sempre sobrescrito."""
+    """title_raw é campo obrigatório - sempre sobrescrito."""
     item_repo.upsert(_make_item(registered_source_id, title_raw="Título Antigo"))
     item_repo.upsert(_make_item(registered_source_id, title_raw="Título Corrigido"))
 
@@ -91,18 +101,19 @@ def test_upsert_always_updates_title_raw(
     assert result.title_raw == "Título Corrigido"
 
 
-def test_upsert_always_updates_current_import_id(
+def test_upsert_updates_current_import_id_even_on_skip(
     item_repo: CatalogItemRepository,
     registered_source_id: int,
 ) -> None:
-    """current_import_id deve refletir o job mais recente."""
-    item_repo.upsert(_make_item(registered_source_id, current_import_id=None))
-    item_repo.upsert(_make_item(registered_source_id, current_import_id=None))
+    """current_import_id deve refletir o job mais recente, mesmo em skipped."""
+    first_import_id = _make_import_job(item_repo, registered_source_id)
+    second_import_id = _make_import_job(item_repo, registered_source_id)
+    item_repo.upsert(_make_item(registered_source_id, current_import_id=first_import_id))
+    item_repo.upsert(_make_item(registered_source_id, current_import_id=second_import_id))
 
     result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
     assert result is not None
-    # Sem import_id explícito, o campo permanece NULL — comportamento correto
-    assert result.source_key == "BK-001"
+    assert result.current_import_id == second_import_id
 
 
 def test_get_by_source_and_key_returns_none_for_missing(
@@ -206,8 +217,6 @@ def test_upsert_merge_policy_coalesce_behavior(
     assert result.author_norm == "original author"
 
 
-# --- Tests for task 1.2: upsert returns (item_id, operation) ---
-
 def test_upsert_returns_inserted_for_new_item(
     item_repo: CatalogItemRepository,
     registered_source_id: int,
@@ -238,19 +247,55 @@ def test_upsert_returns_skipped_for_identical_item(
     assert second_id == first_id
 
 
-def test_upsert_skipped_does_not_modify_db(
+def test_upsert_identical_raw_but_changed_derived_fields_is_updated(
     item_repo: CatalogItemRepository,
     registered_source_id: int,
 ) -> None:
-    """Skipped upsert must not execute the INSERT/UPDATE when content is identical."""
-    item = _make_item(registered_source_id, year=2020)
+    raw_record = {"source_key": "BK-001", "title": "Título Original", "author": "Autor X"}
+    first_import_id = _make_import_job(item_repo, registered_source_id)
+    second_import_id = _make_import_job(item_repo, registered_source_id)
+    item_repo.upsert(
+        _make_item(
+            registered_source_id,
+            author_norm="autor x",
+            current_import_id=first_import_id,
+            raw_record_json=raw_record,
+        )
+    )
+
+    item_id, operation = item_repo.upsert(
+        _make_item(
+            registered_source_id,
+            author_norm="autor canonico",
+            current_import_id=second_import_id,
+            raw_record_json=raw_record,
+        )
+    )
+
+    assert operation == "updated"
+    assert item_id > 0
+    result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
+    assert result is not None
+    assert result.author_norm == "autor canonico"
+    assert result.current_import_id == second_import_id
+
+
+def test_upsert_skipped_preserves_materialized_fields(
+    item_repo: CatalogItemRepository,
+    registered_source_id: int,
+) -> None:
+    """Skipped upsert não deve alterar campos materializados além do ponteiro de import."""
+    first_import_id = _make_import_job(item_repo, registered_source_id)
+    second_import_id = _make_import_job(item_repo, registered_source_id)
+    item = _make_item(registered_source_id, year=2020, current_import_id=first_import_id)
     first_id, first_op = item_repo.upsert(item)
     assert first_op == "inserted"
-    # Re-upsert with the exact same item — raw_record_json is identical → skipped
-    second_id, second_op = item_repo.upsert(item)
+
+    second_id, second_op = item_repo.upsert(item.model_copy(update={"current_import_id": second_import_id}))
     assert second_op == "skipped"
     assert second_id == first_id
-    # DB record must be unchanged
+
     result = item_repo.get_by_source_and_key(registered_source_id, "BK-001")
     assert result is not None
     assert result.year == 2020
+    assert result.current_import_id == second_import_id

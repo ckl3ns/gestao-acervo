@@ -15,7 +15,10 @@ class ThemeRepository:
             (theme.name, theme.slug, theme.description),
         )
         self.conn.commit()
-        return int(cursor.lastrowid)
+        lastrowid = cursor.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("Falha ao persistir tema")
+        return int(lastrowid)
 
     def list_all(self) -> list[Theme]:
         rows = self.conn.execute("SELECT * FROM themes ORDER BY name").fetchall()

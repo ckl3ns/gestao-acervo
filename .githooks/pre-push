@@ -4,6 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
+echo "[pre-push] ruff lint..."
+python -m ruff check src/ tests/ app/
+
+echo "[pre-push] mypy..."
+python -m mypy src
+
 echo "[pre-push] tests with coverage..."
 python -m pytest --cov --cov-fail-under=70 -q
 

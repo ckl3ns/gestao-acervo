@@ -6,6 +6,7 @@ Validates: Requirements 4.1, 4.2, 4.4, 4.5
 from __future__ import annotations
 
 import sqlite3
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -89,10 +90,8 @@ def test_parser_failure_sets_failed_status(
         db_conn, source_lookup, alias_repo, item_repo, import_repo, logger, _FailingParser()
     )
 
-    try:
+    with suppress(RuntimeError):
         use_case.execute(source_id, _DUMMY_FILE)
-    except RuntimeError:
-        pass
 
     row = db_conn.execute(
         "SELECT status, total_errors FROM imports ORDER BY id DESC LIMIT 1"

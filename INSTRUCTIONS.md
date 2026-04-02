@@ -32,7 +32,7 @@ Responsável por:
 - quebrar trabalho em unidades pequenas e verificáveis;
 - impor disciplina de branch, commit, testes e documentação;
 - evitar deriva de escopo;
-- garantir qualidade mínima de código e markdown;
+- garantir qualidade mínima de código, testabilidade, manutenibilidade e markdown;
 - registrar progresso, decisões e pendências.
 
 ### Agentes executores
@@ -121,7 +121,8 @@ Regras:
 - sem código morto novo;
 - sem comentários redundantes;
 - sem acoplamento desnecessário com UI;
-- testes cobrindo comportamento novo ou alterado.
+- testes cobrindo comportamento novo ou alterado;
+- mudanças preservando manutenibilidade: nomes explícitos, baixo acoplamento, responsabilidades nítidas e documentação de intenção quando a decisão não for óbvia.
 
 ### Markdown
 - sem texto vago;
@@ -151,6 +152,7 @@ Uma tarefa só é considerada pronta quando:
 - tem branch própria;
 - tem commits semânticos;
 - tem testes verdes;
+- mantém ou melhora a manutenibilidade do trecho alterado;
 - tem progresso documentado;
 - tem pendências explícitas;
 - está pronta para PR sem esconder risco estrutural.

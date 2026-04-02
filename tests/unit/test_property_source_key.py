@@ -12,7 +12,6 @@ from catalogo_acervo.application.use_cases.import_source_items_from_source impor
     _extract_source_key,
 )
 
-
 # ---------------------------------------------------------------------------
 # Property 6: source_key fallback determinism
 # Validates: Requirements 3.1, 3.2, 3.3

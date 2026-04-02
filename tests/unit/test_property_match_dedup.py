@@ -46,41 +46,30 @@ def _insert_source(conn: sqlite3.Connection) -> int:
     return int(cursor.lastrowid)
 
 
-# ---------------------------------------------------------------------------
-# Property 5: match deduplication
-# Validates: Requirements 2.1, 2.2
-# ---------------------------------------------------------------------------
-
 @settings(max_examples=100)
 @given(
     st.integers(min_value=1, max_value=1000),
     st.integers(min_value=1, max_value=1000),
 )
 def test_property_match_deduplication(left_id: int, right_id: int) -> None:
-    """Adding the same match pair twice must not create duplicate rows.
-
-    # Feature: core-integrity-fixes, Property 5: match deduplication
-    Validates: Requirements 2.1, 2.2
-    """
+    """Adding the same match pair twice must not create duplicate rows."""
     assume(left_id != right_id)
 
     conn = _make_conn()
-    source_id = _insert_source(conn)
+    try:
+        source_id = _insert_source(conn)
+        item_left = _insert_catalog_item(conn, source_id, left_id)
+        item_right = _insert_catalog_item(conn, source_id, right_id)
+        match_repo = MatchRepository(conn)
 
-    item_left = _insert_catalog_item(conn, source_id, left_id)
-    item_right = _insert_catalog_item(conn, source_id, right_id)
+        match_repo.add(item_left, item_right, score=0.9, rule="exact_title", status="pending", confidence_band="high")
+        match_repo.add(item_right, item_left, score=0.9, rule="exact_title", status="pending", confidence_band="high")
 
-    match_repo = MatchRepository(conn)
+        count = conn.execute(
+            "SELECT COUNT(*) FROM matches WHERE left_item_id = ? AND right_item_id = ?",
+            (min(item_left, item_right), max(item_left, item_right)),
+        ).fetchone()[0]
 
-    # Call add twice with the same pair — must not raise
-    match_repo.add(item_left, item_right, score=0.9, rule="exact_title", status="pending", confidence_band="high")
-    match_repo.add(item_left, item_right, score=0.9, rule="exact_title", status="pending", confidence_band="high")
-
-    count = conn.execute(
-        "SELECT COUNT(*) FROM matches WHERE left_item_id = ? AND right_item_id = ?",
-        (item_left, item_right),
-    ).fetchone()[0]
-
-    assert count == 1, (
-        f"Expected exactly 1 match row for pair ({item_left}, {item_right}), got {count}"
-    )
+        assert count == 1
+    finally:
+        conn.close()

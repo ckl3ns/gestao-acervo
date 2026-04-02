@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 
 import pytest
 
@@ -22,11 +23,14 @@ _SCHEMA_PATH = (
 
 
 @pytest.fixture()
-def db_conn() -> sqlite3.Connection:
+def db_conn() -> Iterator[sqlite3.Connection]:
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     init_db(conn, _SCHEMA_PATH)
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -42,9 +46,9 @@ def test_fts5_whitespace_only_returns_empty_string() -> None:
     assert _sanitize_fts5_query("   ") == ""
 
 
-def test_fts5_normal_query_unchanged() -> None:
+def test_fts5_normal_query_is_quoted() -> None:
     result = _sanitize_fts5_query("teologia")
-    assert result == "teologia"
+    assert result == '"teologia"'
 
 
 def test_fts5_unbalanced_open_paren_removed() -> None:
@@ -59,24 +63,19 @@ def test_fts5_unbalanced_close_paren_removed() -> None:
 
 
 def test_fts5_balanced_parens_words_preserved() -> None:
-    # Parênteses são removidos; palavras internas são preservadas
     result = _sanitize_fts5_query("(foo bar)")
     assert "(" not in result
-    assert "foo" in result
-    assert "bar" in result
+    assert result == '"foo" "bar"'
 
 
 def test_fts5_unclosed_quote_removed() -> None:
     result = _sanitize_fts5_query('"unterminated')
-    assert '"' not in result
+    assert result == '"unterminated"'
 
 
 def test_fts5_closed_quotes_words_preserved() -> None:
-    # Aspas são removidas; palavras internas são preservadas
     result = _sanitize_fts5_query('"frase exata"')
-    assert '"' not in result
-    assert "frase" in result
-    assert "exata" in result
+    assert result == '"frase" "exata"'
 
 
 def test_fts5_isolated_and_operator_removed() -> None:
@@ -94,10 +93,19 @@ def test_fts5_isolated_not_operator_removed() -> None:
     assert result == ""
 
 
+def test_fts5_hyphenated_token_is_quoted() -> None:
+    result = _sanitize_fts5_query("0-0")
+    assert result == '"0-0"'
+
+
+def test_fts5_alpha_hyphen_token_is_quoted() -> None:
+    result = _sanitize_fts5_query("abc-def")
+    assert result == '"abc-def"'
+
+
 def test_fts5_cj_date_style_query_no_error() -> None:
-    # "C. J. Date" causava OperationalError antes da sanitização
     result = _sanitize_fts5_query("C. J. Date")
-    assert isinstance(result, str)
+    assert result == '"C" "J" "Date"'
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +132,12 @@ def test_search_unbalanced_parens_no_exception(db_conn: sqlite3.Connection) -> N
 def test_search_unclosed_quote_no_exception(db_conn: sqlite3.Connection) -> None:
     uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
     result = uc.execute('"unterminated')
+    assert isinstance(result, list)
+
+
+def test_search_hyphenated_numeric_token_no_exception(db_conn: sqlite3.Connection) -> None:
+    uc = SearchCatalogUseCase(CatalogItemRepository(db_conn))
+    result = uc.execute("0-0")
     assert isinstance(result, list)
 
 

@@ -102,6 +102,7 @@ make install-hooks
 ### 2. Execução
 - fazer uma mudança pequena;
 - testar;
+- revisar legibilidade, acoplamento e impacto de manutenção;
 - documentar progresso;
 - commitar;
 - repetir.
@@ -131,6 +132,7 @@ Usado para:
 ## Checklist de PR
 Antes de abrir ou aprovar PR:
 - [ ] testes verdes
+- [ ] manutenibilidade preservada ou melhorada
 - [ ] commits pequenos e semânticos
 - [ ] escopo coerente com a branch
 - [ ] `docs/STATUS.md` e `docs/WORK_ITEMS.md` atualizados, se aplicável
