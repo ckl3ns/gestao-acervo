@@ -58,7 +58,7 @@ def test_import_pipeline_accepts_real_logos10_export_shape(
     assert item.author_raw == "Platão"
     assert item.publisher_raw == "Faithlife"
     assert item.year == 2021
-    assert item.resource_type == "Monografia"
+    assert item.resource_type == "monografia"
 
 
 def test_import_pipeline_accepts_real_logos7_export_shape_without_publishers(
@@ -93,4 +93,4 @@ def test_import_pipeline_accepts_real_logos7_export_shape_without_publishers(
     assert item.author_raw == "VanGemeren, Willem A."
     assert item.publisher_raw is None
     assert item.year == 1997
-    assert item.resource_type == "Léxico"
+    assert item.resource_type == "lexico"

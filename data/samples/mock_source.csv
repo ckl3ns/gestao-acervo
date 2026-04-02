@@ -1,4 +1,4 @@
 source_key,title,author,series,publisher,year,language,item_type,resource_type
-BK-001,Introdução à Teologia Sistemática,Wayne Grudem,Teologia Sistemática,Editora Exemplo,2015,pt,book,pdf
-BK-002,Banco de Dados Relacionais,C. J. Date,Computação,TechPress,2012,pt,book,pdf
-CRS-010,Curso Panorama Bíblico,Equipe Seminário,Cursos Bíblicos,Seminário X,2020,pt,course,video
+BK-001,Introdução à Teologia,equipe seminario,Fundamentos da Fé,Editora Exemplo,2021,pt,book,pdf
+BK-002,História da Igreja Antiga,joão silva,História Cristã,Editora Patrística,2019,pt,book,epub
+BK-003,Comentário de Romanos,maria oliveira,Comentário Expositivo,Editora Acadêmica,2020,pt,book,pdf
