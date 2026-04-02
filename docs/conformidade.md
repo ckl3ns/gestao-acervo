@@ -1,7 +1,7 @@
 # Análise de Conformidade do Repositório
 
 **Data-base do snapshot**: 2026-04-01  
-**Estado deste documento**: histórico, não autoritativo para a branch do parser Logos
+**Estado deste documento**: histórico, não autoritativo para o estado corrente do repositório
 
 ---
 
@@ -33,9 +33,9 @@ Não repetir como fato atual, sem nova validação:
 - afirmação de que nenhuma branch de trabalho relevante existe;
 - afirmação de que o caminho crítico segue sem alterações desde o snapshot anterior.
 
-## Atualização necessária após aplicar a entrega do parser Logos
+## Atualização necessária para voltar a ser autoritativo
 
-Depois de aplicar os arquivos desta entrega e rodar a suíte, regenerar este documento com:
+Para este documento voltar a representar o estado atual (e não só um snapshot), regenerar com:
 
 1. número real de testes passando;
 2. cobertura real;

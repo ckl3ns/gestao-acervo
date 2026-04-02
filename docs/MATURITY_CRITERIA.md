@@ -4,8 +4,8 @@ Este documento define as condições verificáveis e binárias para considerar o
 operacionalmente confiável. Enquanto qualquer critério estiver "não provado", o projeto
 está no estágio bootstrap.
 
-**Última revisão**: 2026-04-01
-**Status geral**: 🔴 Bootstrap — nenhum critério provado
+**Última revisão**: 2026-04-02
+**Status geral**: 🔴 Bootstrap — caminho crítico não provado (com critérios de suporte parcialmente provados)
 
 ---
 
@@ -24,9 +24,9 @@ está no estágio bootstrap.
 
 | # | Critério | Como verificar | Status |
 |---|----------|----------------|--------|
-| S1 | Parser real disponível (CSV ou JSON) | MockParser substituído por parser que lê arquivo real | ❌ Não provado |
-| S2 | DTOs usados na UI | Streamlit usa mappers em vez de acessar domínio diretamente | ❌ Não provado |
-| S3 | mypy enforçado em hooks | pre-push bloqueia erros de tipo | ❌ Não provado |
+| S1 | Parser real disponível (CSV ou JSON) | Existência de parser real versionado e exercitado em testes de integração | ✅ Provado (`a930c8d`) |
+| S2 | DTOs usados na UI | Streamlit usa mappers em vez de acessar domínio diretamente | ✅ Provado (`f62e375`) |
+| S3 | mypy enforçado em hooks | pre-push bloqueia erros de tipo | ✅ Provado (`1401454`) |
 | S4 | Trilha de auditoria de reconciliação | Decisões de merge registradas e consultáveis | ❌ Não provado |
 
 ---
